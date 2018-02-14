@@ -1,0 +1,17 @@
+{
+  "name": "async-editable-field",
+  "description": "This is a field display component which is editable and working async.",
+  "main": "async-editable-field.html",
+  "dependencies": {
+    "polymer": "Polymer/polymer#1.9 - 2",
+    "promise-polyfill": "PolymerLabs/promise-polyfill#1 - 2",
+    "iron-ajax": "PolymerElements/iron-ajax#1 - 2",
+    "paper-spinner": "PolymerElements/paper-spinner#1 - 2"
+  },
+  "devDependencies": {
+    "iron-demo-helpers": "PolymerElements/iron-demo-helpers#^2.0.0",
+    "web-component-tester": "Polymer/web-component-tester#^6.0.0",
+    "webcomponentsjs": "webcomponents/webcomponentsjs#^1.0.0",
+    "git-version-tagging": "^1.0.0"
+  }
+}

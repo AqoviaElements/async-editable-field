@@ -1,0 +1,197 @@
+<link rel="import" href="../polymer/polymer-element.html">
+<link rel="import" href="../paper-spinner/paper-spinner.html">
+<link rel="import" href="../promise-polyfill/promise-polyfill-lite.html">
+<link rel="import" href="../iron-ajax/iron-ajax.html">
+
+<dom-module id="async-editable-field">
+  <template>
+    <style>
+      .error {
+        border: solid 1px red;
+      }
+    </style>
+
+    <iron-ajax id="ajaxRequest" url$="{{url}}" method="post" content-type="application/json" body$="{{requestBody}}" handle-as="json"
+      on-response="_handleResponse" on-error="_handleErrorResponse"></iron-ajax>
+    <span hidden="{{editing}}" on-click="editValue">{{value}}</span>
+    <input id="txt" class$="{{_getInputClasses(error)}}" hidden="{{!editing}}" value="{{value}}" on-keydown="_handleKeyDown"
+      on-blur="_handleBlur" />
+    <span hidden="{{!loading}}" id="loading">
+      <paper-spinner active></paper-spinner>
+    </span>
+    <button id="btnAccept" hidden$="{{_hideButtons(editing, loading, showButtons)}}" on-click="save">{{saveText}}</button>
+    <button id="btnCancel" hidden$="{{_hideButtons(editing, loading, showButtons)}}" on-click="cancelEdit">{{cancelText}}</button>
+  </template>
+
+  <script>
+    /**
+     * `async-editable-field`
+     * This is an editable field component which can validate input and POST asynchronously
+     *
+     * @customElement
+     * @polymer
+     * @demo demo/index.html
+     */
+     Polymer({
+      /* this is the element's prototype */
+      is: 'async-editable-field',
+
+      properties: {
+        value: {
+          type: String,
+          value: ''
+        },
+        name: {
+          type: String,
+          value: 'value'
+        },
+        saveText: {
+          type: String,
+          value: 'Ok'
+        },
+        cancelText: {
+          type: String,
+          value: 'Cancel'
+        },
+        url: {
+          type: String,
+          value: null
+        },
+        showButtons: {
+          type: Object,
+          value: true
+        },
+
+        requestBody: {
+          type: String,
+          value: "{}",
+          readOnly: true
+        },
+        editing: {
+          type: Boolean,
+          value: false,
+          readOnly: true
+        },
+        loading: {
+          type: Boolean,
+          value: false,
+          readOnly: true
+        },
+        error: {
+          type: Boolean,
+          value: false,
+          readOnly: true
+        },
+        focused: {
+          type: Boolean,
+          value: true,
+          readOnly: true
+        },
+        validationFunction: {
+          type: Function,
+          value: null,
+          readOnly: true
+        },
+        successResponseFunction: {
+          type: Function,
+          value: null,
+          readOnly: true          
+        },
+        errorResponseFunction: {
+          type: Function,
+          value: null,
+          readOnly: true          
+        }
+      },
+
+      editValue: function(e) {
+        this._setEditing(true);
+        this.$.txt.value = this.value;
+      },
+    
+      cancelEdit: function(e) {
+        this._setEditing(false);
+        this._setError(false);
+      },
+
+      save: function() {
+        if (this.validationFunction && !this.validate())
+            return;
+
+        if (this.$.txt.value == this.value || !this.url) {
+          this._saveFieldInputToValue();
+          return;
+        }
+
+        this._setError(false);
+        this._setLoading(true);
+        this._setRequestBody('{ "' + this.name + '": "' + this.$.txt.value + '" }');
+        this.$.ajaxRequest.generateRequest();
+      },
+
+      validate: function() {        
+        if (this.validationFunction(this.$.txt.value)) {
+          this._setError(false);
+          return true;
+        } else {
+          this._setError(true);
+          return false;
+        }
+      },
+
+      _saveFieldInputToValue() {
+        this._setLoading(false);
+        this._setEditing(false);
+        this.value = this.$.txt.value;
+      },
+
+      _handleResponse: function(e) {
+        this._saveFieldInputToValue();
+
+        if (this.successResponseFunction)
+          this.successResponseFunction(e.detail.response);
+      },
+
+      _handleErrorResponse: function(e) {
+        this._setLoading(false);
+        this._setError(true);
+
+        if (this.errorResponseFunction)
+          this.errorResponseFunction(e.detail.request.xhr.response, e.detail.request.status);
+      },
+
+      _hideButtons: function() {
+        return !this.editing || this.loading || !this.showButtons;
+      },
+
+      _getInputClasses: function() {
+        return this.error ? "error" : "";
+      },
+
+      _handleKeyDown: function(e) {
+        this._setFocused(true);
+
+        if (this.showButtons)
+          return;
+
+        if (e.keyCode === 13) {
+          this.save();
+        } else if (e.keyCode === 27) {
+          this._setFocused(false);
+          this.cancelEdit();
+        }
+      },
+
+      _handleBlur: function() {
+        if (this.showButtons)
+          return;
+        
+        if (!this.focused)
+          return;
+
+        this.save();
+      }
+      
+    });
+  </script>
+</dom-module>
