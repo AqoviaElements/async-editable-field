@@ -13,14 +13,14 @@
 
     <iron-ajax id="ajaxRequest" url$="{{url}}" method="post" content-type="application/json" body$="{{requestBody}}" handle-as="json"
       on-response="_handleResponse" on-error="_handleErrorResponse"></iron-ajax>
-    <span hidden="{{editing}}" on-click="editValue">{{value}}</span>
-    <input id="txt" class$="{{_getInputClasses(error)}}" hidden="{{!editing}}" value="{{value}}" on-keydown="_handleKeyDown"
+    <span id="displayValue" hidden="{{editing}}" on-tap="editValue">{{value}}</span>
+    <input id="textInput" class$="{{_getInputClasses(error)}}" hidden="{{!editing}}" value="{{value}}" on-keydown="_handleKeyDown"
       on-blur="_handleBlur" />
-    <span hidden="{{!loading}}" id="loading">
+    <span id="loading" hidden="{{!loading}}">
       <paper-spinner active></paper-spinner>
     </span>
-    <button id="btnAccept" hidden$="{{_hideButtons(editing, loading, showButtons)}}" on-click="save">{{saveText}}</button>
-    <button id="btnCancel" hidden$="{{_hideButtons(editing, loading, showButtons)}}" on-click="cancelEdit">{{cancelText}}</button>
+    <button id="saveButton" hidden$="{{_hideButtons(editing, loading, showButtons)}}" on-tap="save">{{saveText}}</button>
+    <button id="cancelButton" hidden$="{{_hideButtons(editing, loading, showButtons)}}" on-tap="cancelEdit">{{cancelText}}</button>
   </template>
 
   <script>
@@ -106,7 +106,7 @@
 
       editValue: function(e) {
         this._setEditing(true);
-        this.$.txt.value = this.value;
+        this.$.textInput.value = this.value;
       },
     
       cancelEdit: function(e) {
@@ -118,19 +118,19 @@
         if (this.validationFunction && !this.validate())
             return;
 
-        if (this.$.txt.value == this.value || !this.url) {
-          this._saveFieldInputToValue();
+        if (this.$.textInput.value == this.value || !this.url) {
+          this.cancelEdit();
           return;
         }
 
         this._setError(false);
         this._setLoading(true);
-        this._setRequestBody('{ "' + this.name + '": "' + this.$.txt.value + '" }');
+        this._setRequestBody('{ "' + this.name + '": "' + this.$.textInput.value + '" }');
         this.$.ajaxRequest.generateRequest();
       },
 
       validate: function() {        
-        if (this.validationFunction(this.$.txt.value)) {
+        if (this.validationFunction(this.$.textInput.value)) {
           this._setError(false);
           return true;
         } else {
@@ -142,7 +142,7 @@
       _saveFieldInputToValue() {
         this._setLoading(false);
         this._setEditing(false);
-        this.value = this.$.txt.value;
+        this.value = this.$.textInput.value;
       },
 
       _handleResponse: function(e) {

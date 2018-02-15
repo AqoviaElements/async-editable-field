@@ -15,62 +15,227 @@
 
 <body>
 
-  <test-fixture id="BasicTestFixture">
+  <test-fixture id="SuccessResponseTestFixture">
     <template>
-      <async-editable-field></async-editable-field>
+      <async-editable-field value="Initial value" url="/success"></async-editable-field>
+    </template>
+  </test-fixture>
+  
+  <test-fixture id="FailResponseTestFixture">
+    <template>
+      <async-editable-field value="Initial value" url="/fail"></async-editable-field>
     </template>
   </test-fixture>
 
-  <test-fixture id="ChangedPropertyTestFixture">
+  <test-fixture id="NoButtonsTestFixture">
     <template>
-      <async-editable-field value="my test value" url='/responds_to_get_with_json'></async-editable-field>
+      <async-editable-field value="Initial value" url="/success" show-buttons="false"></async-editable-field>
+    </template>
+  </test-fixture>
+  
+  <test-fixture id="ButtonTextTestFixture">
+    <template>
+      <async-editable-field value="Initial value" save-text="Update" cancel-text="Discard"></async-editable-field>
     </template>
   </test-fixture>
 
   <script>
-    suite('async-editable-field', () => {
+    suite('Display Tests', () => {
 
-      var ajax;
-      var request;
-      var server;
+      test("element can be instantiated with a value", () => {
+        const element = fixture('SuccessResponseTestFixture');
+        assert.equal(element.value, 'Initial value');
+      });
 
-      var responseHeaders = {
-        json: {
-          'Content-Type': 'application/json'
-        }
-      };
+      test("on load, text input is hidden", () => {
+        const element = fixture('SuccessResponseTestFixture');
+        assert.equal(element.$.textInput.hidden, true);
+      });
+
+      test("on load, element value is displayed", () => {
+        const element = fixture('SuccessResponseTestFixture');
+        assert.equal(element.$.displayValue.hidden, false);
+      });
+
+      test("on load, buttons are hidden", () => {
+        const element = fixture('SuccessResponseTestFixture');
+        assert.equal(element.$$("button").hidden, true);
+      });
+
+      test("on load, loading spinner is hidden", () => {
+        const element = fixture('SuccessResponseTestFixture');
+        assert.equal(element.$.loading.hidden, true);
+      });
+
+      test("when field is clicked, text input is displayed", () => {
+        const element = fixture('SuccessResponseTestFixture');
+        element.$.displayValue.click();
+        assert.equal(element.$.textInput.hidden, false);
+      });
+      
+      test("when field is clicked, element value is hidden", () => {
+        const element = fixture('SuccessResponseTestFixture');
+        element.$.displayValue.click();
+        assert.equal(element.$.displayValue.hidden, true);
+      });
+
+      test("when field is clicked, buttons are displayed", () => {
+        const element = fixture('SuccessResponseTestFixture');
+        element.$.displayValue.click();
+        assert.equal(element.$$("button").hidden, false);
+      });
+
+      test("changing the text in the input alone does not update the element's value", () => {
+        const element = fixture('SuccessResponseTestFixture');
+        element.$.displayValue.click();
+        element.$.textInput.value = "New Value";
+        assert.equal(element.value, "Initial value");
+      });
+
+      test("cancelling an edit displays the element's original value", () => {
+        const element = fixture('SuccessResponseTestFixture');
+        element.$.displayValue.click();
+        element.$.textInput.value = "New Value";
+        element.$.cancelButton.click();
+        assert.equal(element.$.displayValue.hidden, false);
+        assert.equal(element.$.textInput.hidden, true);
+        assert.equal(element.value, 'Initial value');
+      });
+
+    });
+
+
+
+    suite('Button Text Tests', () => {
+
+      test("buttons have default text, if not provided", () => {
+        const element = fixture('SuccessResponseTestFixture');
+        var buttons = Polymer.dom(element.root).querySelectorAll("button");
+        assert.equal(buttons[0].innerHTML, "Ok");
+        assert.equal(buttons[1].innerHTML, "Cancel");
+      });
+
+      test("buttons can be instantiated with custom text", () => {
+        const element = fixture('ButtonTextTestFixture');
+        var buttons = Polymer.dom(element.root).querySelectorAll("button");
+        assert.equal(buttons[0].innerHTML, "Update");
+        assert.equal(buttons[1].innerHTML, "Discard");
+      });
+           
+    });
+
+
+
+    suite('Saving Tests', () => {
+      var ajax, request, server;
 
       setup(function () {
+        var headers = { 'Content-Type': 'application/json' };
         server = sinon.fakeServer.create();
-        server.respondWith(
-          'GET',
-          /\/responds_to_get_with_json.*/, [
-            200,
-            responseHeaders.json,
-            '{"success":true}'
-          ]
-        );
+        server.respondWith('POST', /\/success/, [200, headers, '{"success":true, "message":"Updated"}']);
+        server.respondWith('POST', /\/fail/, [400, headers, '{"success":false, "message":"Invalid data"}']);
       });
 
-      teardown(function () {
-        server.restore();
+      teardown(function () { server.restore(); });
+
+
+      test("clicking save when no change has been made, does not result in a request being made", () => {
+        const element = fixture('SuccessResponseTestFixture');
+        element.$.displayValue.click();
+        element.$.textInput.value = "Initial value";
+        element.$.saveButton.click();
+        assert.equal(server.requests.length, 0);
+        assert.equal(element.$.displayValue.hidden, false);
+        assert.equal(element.$.textInput.hidden, true);
       });
 
-      test('instantiating the element with default properties works', () => {
-        const element = fixture('BasicTestFixture');
-        assert.equal(element.value, '');
-        const elementShadowRoot = element.shadowRoot;
-        const elementHeader = elementShadowRoot.querySelector('h2');
+      test("saving an edit displays the loading spinner", () => {
+        const element = fixture('SuccessResponseTestFixture');
+        element.$.displayValue.click();
+        element.$.textInput.value = "New Value";
+        element.$.saveButton.click();
+        assert.equal(element.$.loading.hidden, false);
       });
 
-      // test('setting a property on the element works', () => {
-      //   // Create a test fixture
-      //   const element = fixture('ChangedPropertyTestFixture');
-      //   assert.equal(element.value, 'new-prop1');
-      //   const elementShadowRoot = element.shadowRoot;
-      //   const elementHeader = elementShadowRoot.querySelector('h2');
-      //   assert.equal(elementHeader.innerHTML, 'Hello new-prop1!');
-      // });
+      test("a successul save response hides the loading spinner", (done) => {
+        const element = fixture('SuccessResponseTestFixture');
+        element.$.displayValue.click();
+        element.$.textInput.value = "New Value";
+        element.$.saveButton.click();
+        server.respond();
+        flush(function () {
+          assert.equal(element.$.loading.hidden, true);
+          done();
+        });
+      });      
+
+      test("a successful save request updates the element's value", (done) => {
+        const element = fixture('SuccessResponseTestFixture');
+        element.$.displayValue.click();
+        element.$.textInput.value = "New value";
+        element.$.saveButton.click();
+        server.respond();
+        flush(function () {
+          assert.equal(element.$.textInput.hidden, true);
+          assert.equal(element.$.displayValue.hidden, false);
+          assert.equal(element.value, "New value");
+          done();
+        });
+      });
+      
+    });
+
+
+
+    suite('No Buttons Tests', () => {
+      var ajax, request, server;
+
+      setup(function () {
+        var headers = { 'Content-Type': 'application/json' };
+        server = sinon.fakeServer.create();
+        server.respondWith('POST', /\/success/, [200, headers, '{"success":true, "message":"Updated"}']);
+        server.respondWith('POST', /\/fail/, [400, headers, '{"success":false, "message":"Invalid data"}']);
+      });
+      
+      teardown(function () { server.restore(); });
+
+      
+      test("when show-buttons=false, upon load, buttons are hidden", () => {
+        const element = fixture('NoButtonsTestFixture');
+        assert.equal(element.$$("button").hidden, true);
+      });
+
+      test("when show-buttons=false, buttons remain hidden when field is clicked", () => {
+        const element = fixture('NoButtonsTestFixture');
+        element.$.displayValue.click();
+        assert.equal(element.$$("button").hidden, true);
+      });
+      
+      test("when show-buttons=false, value is saved upon blur", (done) => {
+        const element = fixture('NoButtonsTestFixture');
+        element.$.displayValue.click();
+        element.$.textInput.focus();
+        element.$.textInput.value = "New value";
+        element.$.textInput.blur();
+        server.respond();
+        flush(function () {
+          assert.equal(element.$.textInput.hidden, true);
+          assert.equal(element.$.displayValue.hidden, false);
+          assert.equal(element.value, "New value");
+          done();
+        });
+      });
+      
+      test("when show-buttons=false, blurring after making no changes does not result in a request being made", () => {
+        const element = fixture('NoButtonsTestFixture');
+        element.$.displayValue.click();
+        element.$.textInput.focus();
+        element.$.textInput.value = "Initial value";
+        element.$.textInput.blur();
+        assert.equal(server.requests.length, 0);
+        assert.equal(element.$.displayValue.hidden, false);
+        assert.equal(element.$.textInput.hidden, true);
+      });
 
     });
   </script>

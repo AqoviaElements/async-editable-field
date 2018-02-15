@@ -10,13 +10,17 @@ addons:
     packages:
     - google-chrome-stable
 before_script:
-  - npm install -g bower polylint web-component-tester
-  - bower install
-  - polylint
-  - chmod -R +x ./bower_components/git-version-tagging
+- npm install -g bower polylint web-component-tester
+- bower install
+- polylint
+- chmod -R +x ./bower_components/git-version-tagging
 script:
-  - xvfb-run wct
+- xvfb-run wct
 after_success:
-  - git config credential.helper "store --file=.git/credentials"
-  - echo "https://${GITHUB_TOKEN}:@github.com" > .git/credentials
-  - if [ "${TRAVIS_BRANCH}" = "master" ] && [ "${TRAVIS_PULL_REQUEST}" = "false" ]; then ./bower_components/git-version-tagging/create-release.sh; fi
+- git config credential.helper "store --file=.git/credentials"
+- echo "https://${GITHUB_TOKEN}:@github.com" > .git/credentials
+- if [ "${TRAVIS_BRANCH}" = "master" ] && [ "${TRAVIS_PULL_REQUEST}" = "false" ];
+  then ./bower_components/git-version-tagging/create-release.sh; fi
+env:
+  global:
+    secure: Nq8wWdTLInepCGsE0OILejAAjsfEyLbc3adxUdI3ASYchY/9Vwsl5dT6P3MFwSkITTJkZbrkbI9BgyPg/plDQwMr0E5FPho2WbSYPT8j5ZIOpZaFkTLwsdOB59AN/V8kzmb08stl8EAmb/dqZBptzQxu4KXsJPblbbIGq6716WC7O940NG3MIy/CursHZdA+sTPOgYrPlQ03PbqCKJvieeWqIUH0BUFFLGE1Ey3mgjcWFgRvFlLsEzkHHjsjEVsA8S61i6v+Fu6yVwTo/fRdlIRskcSiwILJY+Qdqz5IV4dTl/Pt2g1cygF7vOoUf6TrP5ck6cmDLq47EX3rKnI1wrUra/6xJsU9KLexHfFPdRAd4htAxt/DQrNQ4clRGrxxsY6/dkL45Jj3iN3Za0OaBulZH1Ry4bEzpRhPCaBYWiGOQ+A3qJMSt0E0EZDVM+svEFTTUvswkEl9RkegqoQr7pjauWBraGy1PgWh9/fdNJS01DiyNkaJ4vrcZWGyu/ZomoPE8NZIMVAZKLLdOgvEGlCxbwlCG2VjsNx3ZVlqX9jD8zVdPd7E7duZGmDCSLvb8yGU+4jTeGZXC21/CFgNhhDILK3MHgGp2WF5ttH/lu/8+J93QxzoId2CDyBqJ4nhRRGJTihbF9cQc4g7uGZUndbO5cA/NDKhtkoydworNmQ=
