@@ -10,9 +10,8 @@ addons:
     packages:
     - google-chrome-stable
 before_script:
-- npm install -g bower polylint web-component-tester
+- npm install -g bower web-component-tester
 - bower install
-- polylint
 - chmod -R +x ./bower_components/git-version-tagging
 script:
 - xvfb-run wct
