@@ -13,10 +13,10 @@
 
     <iron-ajax id="ajaxRequest" url$="{{url}}" method="post" content-type="application/json" body$="{{requestBody}}" handle-as="json"
       on-response="_handleResponse" on-error="_handleErrorResponse"></iron-ajax>
-    <span id="displayValue" hidden="{{editing}}" on-tap="editValue">{{value}}</span>
-    <input id="textInput" class$="{{_getInputClasses(error)}}" hidden="{{!editing}}" value="{{value}}" on-keydown="_handleKeyDown"
+    <span id="displayValue" hidden$="{{editing}}" on-tap="editValue">{{value}}</span>
+    <input id="textInput" class$="{{_getInputClasses(error)}}" hidden$="{{!editing}}" value="{{value}}" on-keydown="_handleKeyDown"
       on-blur="_handleBlur" />
-    <span id="loading" hidden="{{!loading}}">
+    <span id="loading" hidden$="{{!loading}}">
       <paper-spinner active></paper-spinner>
     </span>
     <button id="saveButton" hidden$="{{_hideButtons(editing, loading, showButtons)}}" on-tap="save">{{saveText}}</button>
