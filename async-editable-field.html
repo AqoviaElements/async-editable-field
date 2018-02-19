@@ -19,8 +19,8 @@
     <span id="loading" hidden$="{{!loading}}">
       <paper-spinner active></paper-spinner>
     </span>
-    <button id="saveButton" hidden$="{{_hideButtons(editing, loading, showButtons)}}" on-tap="save">{{saveText}}</button>
-    <button id="cancelButton" hidden$="{{_hideButtons(editing, loading, showButtons)}}" on-tap="cancelEdit">{{cancelText}}</button>
+    <button id="saveButton" hidden$="{{_shouldHideButtons(editing, loading, showButtons)}}" on-tap="save">{{saveText}}</button>
+    <button id="cancelButton" hidden$="{{_shouldHideButtons(editing, loading, showButtons)}}" on-tap="cancelEdit">{{cancelText}}</button>
   </template>
 
   <script>
@@ -82,11 +82,6 @@
           value: false,
           readOnly: true
         },
-        focused: {
-          type: Boolean,
-          value: true,
-          readOnly: true
-        },
         validationFunction: {
           type: Function,
           value: null,
@@ -104,32 +99,31 @@
         }
       },
 
-      editValue: function(e) {
+      editValue: function() {
         this._setEditing(true);
         this.$.textInput.value = this.value;
       },
+
+      _saveEdit() {
+        this.value = this.$.textInput.value;
+        this.finishEdit();
+      },
+
+      cancelEdit: function() {
+        this.$.textInput.value = this.value;
+        this.finishEdit();
+      },
     
-      cancelEdit: function(e) {
+      finishEdit: function() {
+        this._setLoading(false);
         this._setEditing(false);
         this._setError(false);
       },
 
-      save: function() {
-        if (this.validationFunction && !this.validate())
-            return;
+      validate: function() {     
+        if (!this.validationFunction)
+          return true;
 
-        if (this.$.textInput.value == this.value || !this.url) {
-          this.cancelEdit();
-          return;
-        }
-
-        this._setError(false);
-        this._setLoading(true);
-        this._setRequestBody('{ "' + this.name + '": "' + this.$.textInput.value + '" }');
-        this.$.ajaxRequest.generateRequest();
-      },
-
-      validate: function() {        
         if (this.validationFunction(this.$.textInput.value)) {
           this._setError(false);
           return true;
@@ -139,14 +133,23 @@
         }
       },
 
-      _saveFieldInputToValue() {
-        this._setLoading(false);
-        this._setEditing(false);
-        this.value = this.$.textInput.value;
+      save: function() {
+        if (!this.validate())
+            return;
+
+        if (!this._isFieldInputDifferentToValue() || !this.url) {
+          this._saveEdit();
+          return;
+        }
+
+        this._setError(false);
+        this._setLoading(true);
+        this._setRequestBody('{ "' + this.name + '": "' + this.$.textInput.value + '" }');
+        this.$.ajaxRequest.generateRequest();
       },
 
       _handleResponse: function(e) {
-        this._saveFieldInputToValue();
+        this._saveEdit();
 
         if (this.successResponseFunction)
           this.successResponseFunction(e.detail.response);
@@ -160,36 +163,31 @@
           this.errorResponseFunction(e.detail.request.xhr.response, e.detail.request.status);
       },
 
-      _hideButtons: function() {
+      _handleKeyDown: function(e) {
+        if (this.showButtons)
+          return;
+
+        if (e.keyCode === 13) // enter/return key
+          this.save();
+        else if (e.keyCode === 27) // escape key
+          this.cancelEdit();
+      },
+
+      _handleBlur: function() {
+        if (!this.showButtons && this._isFieldInputDifferentToValue())
+          this.save();
+      },
+
+      _isFieldInputDifferentToValue() {
+        return this.$.textInput.value != this.value;
+      },
+
+      _shouldHideButtons: function() {
         return !this.editing || this.loading || !this.showButtons;
       },
 
       _getInputClasses: function() {
         return this.error ? "error" : "";
-      },
-
-      _handleKeyDown: function(e) {
-        this._setFocused(true);
-
-        if (this.showButtons)
-          return;
-
-        if (e.keyCode === 13) {
-          this.save();
-        } else if (e.keyCode === 27) {
-          this._setFocused(false);
-          this.cancelEdit();
-        }
-      },
-
-      _handleBlur: function() {
-        if (this.showButtons)
-          return;
-        
-        if (!this.focused)
-          return;
-
-        this.save();
       }
       
     });
