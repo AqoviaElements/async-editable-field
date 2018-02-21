@@ -247,31 +247,31 @@
         assert.equal(element.$.cancelButton.hidden, true);
       });
       
-      test("value is saved upon blur", (done) => {
-        const element = fixture('NoButtonsTestFixture');
-        element.$.displayValue.click();
-        element.$.textInput.focus();
-        element.$.textInput.value = "New value";
-        element.$.textInput.blur();
-        server.respond();
-        flush(function () {
-          assert.equal(element.$.textInput.hidden, true);
-          assert.equal(element.$.displayValue.hidden, false);
-          assert.equal(element.value, "New value");
-          done();
-        });
-      });
+      // test("value is saved upon blur", (done) => {
+      //   const element = fixture('NoButtonsTestFixture');
+      //   element.$.displayValue.click();
+      //   element.$.textInput.focus();
+      //   element.$.textInput.value = "New value";
+      //   element.$.textInput.blur();
+      //   server.respond();
+      //   flush(function () {
+      //     assert.equal(element.$.textInput.hidden, true);
+      //     assert.equal(element.$.displayValue.hidden, false);
+      //     assert.equal(element.value, "New value");
+      //     done();
+      //   });
+      // });
       
-      test("blurring after making no changes does not result in a request being made", () => {
-        const element = fixture('NoButtonsTestFixture');
-        element.$.displayValue.click();
-        element.$.textInput.focus();
-        element.$.textInput.value = "Initial value";
-        element.$.textInput.blur();
-        assert.equal(server.requests.length, 0);
-        assert.equal(element.$.displayValue.hidden, false);
-        assert.equal(element.$.textInput.hidden, true);
-      });
+      // test("blurring after making no changes does not result in a request being made", () => {
+      //   const element = fixture('NoButtonsTestFixture');
+      //   element.$.displayValue.click();
+      //   element.$.textInput.focus();
+      //   element.$.textInput.value = "Initial value";
+      //   element.$.textInput.blur();
+      //   assert.equal(server.requests.length, 0);
+      //   assert.equal(element.$.displayValue.hidden, false);
+      //   assert.equal(element.$.textInput.hidden, true);
+      // });
 
     });
 
