@@ -28,10 +28,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       font: 400 13.3333px Arial;
     }
 
-    papyrus-input {
-      display: block;
-    }
-
     demo-snippet.horizontal {
       --demo-snippet-demo: {
         @apply(--layout-horizontal);
@@ -40,21 +36,13 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       }
     }
 
-    demo-snippet.horizontal papyrus-input {
-      display: inline-block;
-    }
-
-    button {
-      width: 70px;
-    }
-
     .vertical-section-container {
       max-width: 800px;
       margin: auto;
     }
 
     .demo-wrapper {
-      width: 350px;
+      width: 370px;
       float: left;
       margin: 7px;
     }
@@ -67,7 +55,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       <h3>Basic usage</h3>
       <demo-snippet>
         <template>
-          <async-editable-field value="Value"></async-editable-field>
+          <async-editable-field value="Value" show-save-button show-cancel-button></async-editable-field>
         </template>
       </demo-snippet>
     </div>
@@ -76,7 +64,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       <h3>With custom button labels</h3>
       <demo-snippet>
         <template>
-          <async-editable-field value="Valor" save-text="Salvar" cancel-text="Cancelar"></async-editable-field>
+          <async-editable-field value="Valor" show-save-button show-cancel-button save-text="Salvar" cancel-text="Cancelar"></async-editable-field>
         </template>
       </demo-snippet>
     </div>
@@ -85,16 +73,16 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       <h3>With url being set</h3>
       <demo-snippet>
         <template>
-          <async-editable-field value="Value" name="myValue" url="http://localhost:8085"></async-editable-field>
+          <async-editable-field value="Value" name="myValue" show-save-button show-cancel-button url="http://localhost:8085"></async-editable-field>
         </template>
       </demo-snippet>
     </div>
     
     <div class='demo-wrapper'>
-      <h3>With no buttons</h3>
+      <h3>With no buttons and save on blur</h3>
       <demo-snippet>
         <template>
-          <async-editable-field value="Value" name="myValue" url="http://localhost:8085" show-buttons="false"></async-editable-field>
+          <async-editable-field value="Value" name="myValue" url="http://localhost:8085" save-on-blur="true"></async-editable-field>
         </template>
       </demo-snippet>
     </div>
@@ -103,10 +91,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       <h3>With custom request response functions</h3>
       <demo-snippet>
         <template>
-          <async-editable-field id="withCustomResponseFunctions" value="Value" url="http://localhost:8085"></async-editable-field>
+          <async-editable-field id="withCustomResponse" value="Value" show-save-button show-cancel-button url="http://localhost:8085"></async-editable-field>
         </template>
         <script>
-            var editableField = document.querySelector('async-editable-field#withCustomResponseFunctions');
+            var editableField = document.querySelector('async-editable-field#withCustomResponse');
             
             editableField._setSuccessResponseFunction(function(response) {
               alert("Success: " + response);
@@ -123,7 +111,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       <h3>With validation</h3>
       <demo-snippet>
         <template>
-          <async-editable-field id="withValidation" value="Value" url="http://localhost:8085"></async-editable-field>
+          <async-editable-field id="withValidation" value="Value" show-save-button show-cancel-button url="http://localhost:8085"></async-editable-field>
         </template>
         <script>
             document.querySelector('async-editable-field#withValidation')._setValidationFunction(function(value) {

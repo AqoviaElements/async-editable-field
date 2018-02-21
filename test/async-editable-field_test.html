@@ -17,31 +17,31 @@
 
   <test-fixture id="SuccessResponseTestFixture">
     <template>
-      <async-editable-field value="Initial value" url="/success"></async-editable-field>
+      <async-editable-field value="Initial value" url="/success" show-save-button show-cancel-button></async-editable-field>
     </template>
   </test-fixture>
   
   <test-fixture id="ErrorResponseTestFixture">
     <template>
-      <async-editable-field value="Initial value" url="/fail"></async-editable-field>
+      <async-editable-field value="Initial value" url="/fail" show-save-button show-cancel-button></async-editable-field>
     </template>
   </test-fixture>
 
   <test-fixture id="NoButtonsTestFixture">
     <template>
-      <async-editable-field value="Initial value" url="/success" show-buttons="false"></async-editable-field>
+      <async-editable-field value="Initial value" url="/success" save-on-blur></async-editable-field>
     </template>
   </test-fixture>
   
   <test-fixture id="ButtonTextTestFixture">
     <template>
-      <async-editable-field value="Initial value" save-text="Update" cancel-text="Discard"></async-editable-field>
+      <async-editable-field value="Initial value" show-save-button show-cancel-button save-text="Update" cancel-text="Discard"></async-editable-field>
     </template>
   </test-fixture>
 
   <test-fixture id="ValidationTestFixture">
     <template>
-      <async-editable-field value="Initial value" url="/success"></async-editable-field>
+      <async-editable-field value="Initial value" url="/success" show-save-button show-cancel-button></async-editable-field>
     </template>
   </test-fixture>
   
@@ -61,7 +61,7 @@
 
       test("on load, element value is displayed", () => {
         const element = fixture('SuccessResponseTestFixture');
-        assert.equal(element.$.displayValue.hidden, false);
+        assert.equal(element.$.displayValue.style.display==="none", false);
       });
 
       test("on load, buttons are hidden", () => {
@@ -84,7 +84,7 @@
       test("when field is clicked, element value is hidden", () => {
         const element = fixture('SuccessResponseTestFixture');
         element.$.displayValue.click();
-        assert.equal(element.$.displayValue.hidden, true);
+        assert.equal(element.$.displayValue.style.display==="none", true);
       });
 
       test("when field is clicked, buttons are displayed", () => {
@@ -106,7 +106,7 @@
         element.$.displayValue.click();
         element.$.textInput.value = "New Value";
         element.$.cancelButton.click();
-        assert.equal(element.$.displayValue.hidden, false);
+        assert.equal(element.$.displayValue.style.display==="none", false);
         assert.equal(element.$.textInput.hidden, true);
         assert.equal(element.value, 'Initial value');
       });
@@ -119,7 +119,7 @@
 
       test("buttons have default text, if not provided", () => {
         const element = fixture('SuccessResponseTestFixture');
-        assert.equal(element.$.saveButton.innerHTML, "Ok");
+        assert.equal(element.$.saveButton.innerHTML, "OK");
         assert.equal(element.$.cancelButton.innerHTML, "Cancel");
       });
 
@@ -152,7 +152,7 @@
         element.$.textInput.value = "Initial value";
         element.$.saveButton.click();
         assert.equal(server.requests.length, 0);
-        assert.equal(element.$.displayValue.hidden, false);
+        assert.equal(element.$.displayValue.style.display==="none", false);
         assert.equal(element.$.textInput.hidden, true);
       });
 
@@ -184,7 +184,7 @@
         server.respond();
         flush(function () {
           assert.equal(element.$.textInput.hidden, true);
-          assert.equal(element.$.displayValue.hidden, false);
+          assert.equal(element.$.displayValue.style.display==="none", false);
           assert.equal(element.value, "New value");
           done();
         });
@@ -211,7 +211,7 @@
         server.respond();
         flush(function () {
           assert.equal(element.$.textInput.hidden, false);
-          assert.equal(element.$.displayValue.hidden, true);
+          assert.equal(element.$.displayValue.style.display==="none", true);
           assert.equal(element.value, "Initial value");
           done();
         });
@@ -220,7 +220,7 @@
     });
 
 
-    // show-buttons="false" tests
+    // hidden buttons tests
     suite('show-buttons="false" tests', () => {
       var ajax, request, server;
 
@@ -256,7 +256,7 @@
       //   server.respond();
       //   flush(function () {
       //     assert.equal(element.$.textInput.hidden, true);
-      //     assert.equal(element.$.displayValue.hidden, false);
+      //     assert.equal(element.$.displayValue.style.display==="none", false);
       //     assert.equal(element.value, "New value");
       //     done();
       //   });
@@ -269,7 +269,7 @@
       //   element.$.textInput.value = "Initial value";
       //   element.$.textInput.blur();
       //   assert.equal(server.requests.length, 0);
-      //   assert.equal(element.$.displayValue.hidden, false);
+      //   assert.equal(element.$.displayValue.style.display==="none", false);
       //   assert.equal(element.$.textInput.hidden, true);
       // });
 
@@ -359,7 +359,7 @@
         server.respond();
         flush(function () {
           assert.equal(element.$.textInput.hidden, true);
-          assert.equal(element.$.displayValue.hidden, false);
+          assert.equal(element.$.displayValue.style.display==="none", false);
           assert.equal(element.value, "12345");
           done();
         });   
