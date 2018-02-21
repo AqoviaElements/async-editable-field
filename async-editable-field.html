@@ -13,14 +13,14 @@
 
     <iron-ajax id="ajaxRequest" url$="{{url}}" method="post" content-type="application/json" body$="{{requestBody}}" handle-as="json"
       on-response="_handleResponse" on-error="_handleErrorResponse"></iron-ajax>
-    <span id="displayValue" hidden$="{{editing}}" on-tap="editValue">{{value}}</span>
+    <span id="displayValue" hidden$="{{editing}}" on-tap="_editValue">{{value}}</span>
     <input id="textInput" class$="{{_getInputClasses(error)}}" hidden$="{{!editing}}" value="{{value}}" on-keydown="_handleKeyDown"
       on-blur="_handleBlur" />
     <span id="loading" hidden$="{{!loading}}">
       <paper-spinner active></paper-spinner>
     </span>
     <button id="saveButton" hidden$="{{_shouldHideButtons(editing, loading, showButtons)}}" on-tap="save">{{saveText}}</button>
-    <button id="cancelButton" hidden$="{{_shouldHideButtons(editing, loading, showButtons)}}" on-tap="cancelEdit">{{cancelText}}</button>
+    <button id="cancelButton" hidden$="{{_shouldHideButtons(editing, loading, showButtons)}}" on-tap="_cancelEdit">{{cancelText}}</button>
   </template>
 
   <script>
@@ -99,27 +99,6 @@
         }
       },
 
-      editValue: function() {
-        this._setEditing(true);
-        this.$.textInput.value = this.value;
-      },
-
-      _saveEdit() {
-        this.value = this.$.textInput.value;
-        this.finishEdit();
-      },
-
-      cancelEdit: function() {
-        this.$.textInput.value = this.value;
-        this.finishEdit();
-      },
-    
-      finishEdit: function() {
-        this._setLoading(false);
-        this._setEditing(false);
-        this._setError(false);
-      },
-
       validate: function() {     
         if (!this.validationFunction)
           return true;
@@ -137,7 +116,7 @@
         if (!this.validate())
             return;
 
-        if (!this._isFieldInputDifferentToValue() || !this.url) {
+        if (this.$.textInput.value == this.value || !this.url) {
           this._saveEdit();
           return;
         }
@@ -146,6 +125,27 @@
         this._setLoading(true);
         this._setRequestBody('{ "' + this.name + '": "' + this.$.textInput.value + '" }');
         this.$.ajaxRequest.generateRequest();
+      },
+
+      _editValue: function() {
+        this._setEditing(true);
+        this.$.textInput.value = this.value;
+      },
+
+      _saveEdit() {
+        this.value = this.$.textInput.value;
+        this._finishEdit();
+      },
+
+      _cancelEdit: function() {
+        this.$.textInput.value = this.value;
+        this._finishEdit();
+      },
+
+      _finishEdit: function() {
+        this._setLoading(false);
+        this._setEditing(false);
+        this._setError(false);
       },
 
       _handleResponse: function(e) {
@@ -170,16 +170,12 @@
         if (e.keyCode === 13) // enter/return key
           this.save();
         else if (e.keyCode === 27) // escape key
-          this.cancelEdit();
+          this._cancelEdit();
       },
 
       _handleBlur: function() {
-        if (!this.showButtons && this._isFieldInputDifferentToValue())
+        if (!this.showButtons)
           this.save();
-      },
-
-      _isFieldInputDifferentToValue() {
-        return this.$.textInput.value != this.value;
       },
 
       _shouldHideButtons: function() {
