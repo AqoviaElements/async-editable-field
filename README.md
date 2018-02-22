@@ -32,7 +32,6 @@
     name="fieldName"
     value="Field Value" 
     url="http://localhost:8085/endpoint/"
-    show-buttons="true"
     save-text="Update"
     cancel-text="Cancel">
 </async-editable-field>
