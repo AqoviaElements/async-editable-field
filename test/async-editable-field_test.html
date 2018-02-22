@@ -17,31 +17,31 @@
 
   <test-fixture id="SuccessResponseTestFixture">
     <template>
-      <async-editable-field value="Initial value" url="/success" show-save-button show-cancel-button></async-editable-field>
+      <async-editable-field value="Initial value" url="/success"></async-editable-field>
     </template>
   </test-fixture>
   
   <test-fixture id="ErrorResponseTestFixture">
     <template>
-      <async-editable-field value="Initial value" url="/fail" show-save-button show-cancel-button></async-editable-field>
+      <async-editable-field value="Initial value" url="/fail"></async-editable-field>
     </template>
   </test-fixture>
 
   <test-fixture id="NoButtonsTestFixture">
     <template>
-      <async-editable-field value="Initial value" url="/success" save-on-blur></async-editable-field>
+      <async-editable-field value="Initial value" url="/success" hide-save-button hide-cancel-button save-on-blur></async-editable-field>
     </template>
   </test-fixture>
   
   <test-fixture id="ButtonTextTestFixture">
     <template>
-      <async-editable-field value="Initial value" show-save-button show-cancel-button save-text="Update" cancel-text="Discard"></async-editable-field>
+      <async-editable-field value="Initial value" save-text="Update" cancel-text="Discard"></async-editable-field>
     </template>
   </test-fixture>
 
   <test-fixture id="ValidationTestFixture">
     <template>
-      <async-editable-field value="Initial value" url="/success" show-save-button show-cancel-button></async-editable-field>
+      <async-editable-field value="Initial value" url="/success"></async-editable-field>
     </template>
   </test-fixture>
   
@@ -221,7 +221,7 @@
 
 
     // hidden buttons tests
-    suite('show-buttons="false" tests', () => {
+    suite('hide buttons tests', () => {
       var ajax, request, server;
 
       setup(function () {
