@@ -33,6 +33,12 @@
     </template>
   </test-fixture>
   
+  <test-fixture id="ReadOnlyTestFixture">
+    <template>
+      <async-editable-field value="Initial value" url="/success" readonly></async-editable-field>
+    </template>
+  </test-fixture>
+  
   <test-fixture id="ButtonTextTestFixture">
     <template>
       <async-editable-field value="Initial value" save-text="Update" cancel-text="Discard"></async-editable-field>
@@ -113,6 +119,25 @@
 
     });
 
+
+    // readonly tests
+    suite('readonly tests', () => {
+
+      test("readonly elements do not become editable when clicked", () => {
+        const element = fixture('ReadOnlyTestFixture');
+        element.$.displayValue.click();
+        assert.equal(element.$.textInput.hidden, true);
+        assert.equal(element.$.displayValue.style.display==="none", false);
+      });
+
+      test("readonly elements do not become editable when .editValue() is called", () => {
+        const element = fixture('ReadOnlyTestFixture');
+        element.editValue();
+        assert.equal(element.$.textInput.hidden, true);
+        assert.equal(element.$.displayValue.style.display==="none", false);
+      });
+      
+    });
 
     // button text tests
     suite('button text tests', () => {
@@ -294,7 +319,7 @@
         const element = fixture('ValidationTestFixture');
         
         var validationTriggered = false;
-        element._setValidationFunction(function(input) {
+        element.setValidationFunction(function(input) {
           validationTriggered = true;
         });
         
@@ -307,7 +332,7 @@
       test("invalid input does not result in a save request being made", () => {
         const element = fixture('ValidationTestFixture');
         
-        element._setValidationFunction(function(input) {
+        element.setValidationFunction(function(input) {
           return (input.length >= 5);
         });
 
@@ -320,7 +345,7 @@
       test("invalid input does not change the element's value", (done) => {
         const element = fixture('ValidationTestFixture');
         
-        element._setValidationFunction(function(input) {
+        element.setValidationFunction(function(input) {
           return (input.length >= 5);
         });
 
@@ -336,7 +361,7 @@
       test("invalid input sets the 'error' class on the text input", () => {
         const element = fixture('ValidationTestFixture');
 
-        element._setValidationFunction(function(input) {
+        element.setValidationFunction(function(input) {
           return (input.length >= 5);
         });
 
@@ -349,7 +374,7 @@
       test("valid input results in a save being made", (done) => {
         const element = fixture('ValidationTestFixture');
         
-        element._setValidationFunction(function(input) {
+        element.setValidationFunction(function(input) {
           return (input.length >= 5);
         });
 
@@ -386,7 +411,7 @@
         const element = fixture('SuccessResponseTestFixture');
         
         var responseMessage;
-        element._setSuccessResponseFunction(function(response) {
+        element.setSuccessResponseCallback(function(response) {
           responseMessage = response.message;
         });
 
@@ -404,7 +429,7 @@
         const element = fixture('ErrorResponseTestFixture');
         
         var statusCode, responseMessage;
-        element._setErrorResponseFunction(function(response, status) {
+        element.setErrorResponseCallback(function(response, status) {
           responseMessage = response.message;
           statusCode = status;
         });
