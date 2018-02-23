@@ -1,0 +1,264 @@
+<link rel="import" href="../polymer/polymer-element.html">
+<link rel="import" href="../paper-spinner/paper-spinner.html">
+<link rel="import" href="../promise-polyfill/promise-polyfill-lite.html">
+<link rel="import" href="../iron-ajax/iron-ajax.html">
+
+<dom-module id="async-editable-field">
+  <template>
+    <style>
+      #errorMark, #validMark {
+        font-size: 15px;
+        margin-right: -15px;
+        font-weight: bold;
+        position: relative;
+        left: -25px;
+        top: 2px;
+      }
+      #errorMark {
+        color: red;
+      }
+      #validMark {
+        color: #99CA3C;
+      }
+      #displayValue {
+        min-width: 100px;
+        display: inline-block;
+      }
+      #textInput {
+        padding: 4px;
+        border-radius: 3px;
+        border: solid 1px #4DC1E8;
+      }
+      button {
+        background-color: #99CA3C;
+        color: #fff;
+        border: none;
+        min-width: 69px;
+        height: 24px;
+      }
+      button:disabled {
+        background-color: #C2E08A;
+      }
+      #displayValue, #textInput, button {
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 12px;
+      }
+    </style>
+
+    <iron-ajax id="ajaxRequest" url$="{{url}}" method="post" content-type="application/json" body$="{{requestBody}}" handle-as="json"
+      on-response="_handleResponse" on-error="_handleErrorResponse"></iron-ajax>
+    <span id="displayValue" style$="display:{{_getValueDisplayStyle(editing)}}" on-tap="_handleFieldClick">{{value}}</span>
+    <input id="textInput" class$="{{_getInputClasses(error)}}" hidden$="{{!editing}}" value="{{inputValue::input}}" placeholder$="{{value}}" on-keydown="_handleKeyDown"
+      on-blur="_handleBlur" />
+    <span id="errorMark" hidden$="{{!error}}">&#10006;</span>
+    <span id="validMark" hidden$="{{!showValid}}">&#10003;</span>
+    <span id="loading" hidden$="{{!loading}}">
+      <paper-spinner active></paper-spinner>
+    </span>
+    <button id="saveButton" hidden$="{{_shouldHideButtons(editing, loading, hideSaveButton)}}" disabled$="{{_shouldDisableSaveButton(inputValue)}}" on-tap="save">{{saveText}}</button>
+    <button id="cancelButton" hidden$="{{_shouldHideButtons(editing, loading, hideCancelButton)}}" on-tap="cancelEdit">{{cancelText}}</button>
+  </template>
+
+  <script>
+    /**
+     * `async-editable-field`
+     * This is an editable field component which can validate input and POST asynchronously
+     *
+     * @customElement
+     * @polymer
+     * @demo demo/index.html
+     */
+     Polymer({
+      
+      is: 'async-editable-field',
+
+      properties: {
+        value: {
+          type: String,
+          value: ''
+        },
+        name: {
+          type: String,
+          value: 'value'
+        },
+        saveText: {
+          type: String,
+          value: 'OK'
+        },
+        cancelText: {
+          type: String,
+          value: 'Cancel'
+        },
+        url: {
+          type: String,
+          value: null
+        },
+        hideSaveButton: {
+          type: Boolean,
+          value: false
+        },
+        hideCancelButton: {
+          type: Boolean,
+          value: false
+        },
+        disableClickToEdit: {
+          type: Boolean,
+          value: false
+        },
+        saveOnBlur: {
+          type: Boolean,
+          value: false
+        },
+        inputValue: {
+          type: String,
+          value: ""
+        },
+        requestBody: {
+          type: String,
+          value: "{}",
+          readOnly: true
+        },
+        editing: {
+          type: Boolean,
+          value: false,
+          readOnly: true
+        },
+        loading: {
+          type: Boolean,
+          value: false,
+          readOnly: true
+        },
+        error: {
+          type: Boolean,
+          value: false,
+          readOnly: true
+        },
+        showValid: {
+          type: Boolean,
+          value: false,
+          readOnly: true
+        },
+        validationFunction: {
+          type: Function,
+          value: null,
+          readOnly: true
+        },
+        successResponseFunction: {
+          type: Function,
+          value: null,
+          readOnly: true          
+        },
+        errorResponseFunction: {
+          type: Function,
+          value: null,
+          readOnly: true          
+        }
+      },
+
+      validate: function() {     
+        if (!this.validationFunction)
+          return true;
+
+        if (this.validationFunction(this.inputValue)) {
+          this._setError(false);
+          return true;
+        } else {
+          this._setError(true);
+          return false;
+        }
+      },
+
+      save: function() {
+        if (!this.validate())
+            return;
+
+        if (this.inputValue == this.value || !this.url) {
+          this._saveEdit();
+          return;
+        }
+
+        this._setError(false);
+        this._setShowValid(false);
+        this._setLoading(true);
+        this._setRequestBody('{ "' + this.name + '": "' + this.inputValue + '" }');
+        this.$.ajaxRequest.generateRequest();
+      },
+
+      editValue: function() {
+        this._setEditing(true);
+        this.inputValue = "";
+      },
+
+      cancelEdit: function() {
+        this.inputValue = this.value;
+        this._finishEdit();
+      },
+
+      _saveEdit() {
+        this.value = this.inputValue;
+        this._finishEdit();
+      },
+
+      _finishEdit: function() {
+        this._setLoading(false);
+        this._setEditing(false);
+        this._setError(false);
+        this._setShowValid(false);
+      },
+
+      _handleResponse: function(e) {
+        this._saveEdit();
+
+        if (this.successResponseFunction)
+          this.successResponseFunction(e.detail.response);
+      },
+
+      _handleErrorResponse: function(e) {
+        this._setLoading(false);
+        this._setError(true);
+
+        if (this.errorResponseFunction)
+          this.errorResponseFunction(e.detail.request.xhr.response, e.detail.request.status);
+      },
+
+      _handleKeyDown: function(e) {
+        if (e.keyCode === 13 && this.inputValue) // enter/return key
+          this.save();
+        else if (e.keyCode === 27) // escape key
+          this.cancelEdit();
+      },
+
+      _handleFieldClick: function() {
+        if (!this.disableClickToEdit)
+          this.editValue();
+      },
+
+      _handleBlur: function() {
+        if (!this.saveOnBlur)
+          return;
+
+        if (!this.inputValue || this.inputValue == this.value)
+          this.cancelEdit();
+        else
+          this.save();
+      },
+
+      _shouldHideButtons: function(editing, loading, hideButton) {
+        return !editing || loading || hideButton;
+      },
+
+      _shouldDisableSaveButton: function(inputValue) {
+        return !inputValue;
+      },
+
+      _getInputClasses: function(error) {
+        return error ? "error" : "";
+      },
+
+      _getValueDisplayStyle(editing) {
+        return editing ? "none" : "inline-block";
+      }
+      
+    });
+  </script>
+</dom-module>

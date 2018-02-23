@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+  <title>async-editable-field test</title>
+
+  <script src="../../webcomponentsjs/webcomponents-loader.js"></script>
+  <script src="../../web-component-tester/browser.js"></script>
+
+  <link rel="import" href="../async-editable-field.html">
+</head>
+
+<body>
+
+  <test-fixture id="SuccessResponseTestFixture">
+    <template>
+      <async-editable-field value="Initial value" url="/success"></async-editable-field>
+    </template>
+  </test-fixture>
+  
+  <test-fixture id="ErrorResponseTestFixture">
+    <template>
+      <async-editable-field value="Initial value" url="/fail"></async-editable-field>
+    </template>
+  </test-fixture>
+
+  <test-fixture id="NoButtonsTestFixture">
+    <template>
+      <async-editable-field value="Initial value" url="/success" hide-save-button hide-cancel-button save-on-blur></async-editable-field>
+    </template>
+  </test-fixture>
+  
+  <test-fixture id="ButtonTextTestFixture">
+    <template>
+      <async-editable-field value="Initial value" save-text="Update" cancel-text="Discard"></async-editable-field>
+    </template>
+  </test-fixture>
+
+  <test-fixture id="ValidationTestFixture">
+    <template>
+      <async-editable-field value="Initial value" url="/success"></async-editable-field>
+    </template>
+  </test-fixture>
+  
+  <script>
+    // element display tests
+    suite('element display tests', () => {
+
+      test("element can be instantiated with a value", () => {
+        const element = fixture('SuccessResponseTestFixture');
+        assert.equal(element.value, 'Initial value');
+      });
+
+      test("on load, text input is hidden", () => {
+        const element = fixture('SuccessResponseTestFixture');
+        assert.equal(element.$.textInput.hidden, true);
+      });
+
+      test("on load, element value is displayed", () => {
+        const element = fixture('SuccessResponseTestFixture');
+        assert.equal(element.$.displayValue.style.display==="none", false);
+      });
+
+      test("on load, buttons are hidden", () => {
+        const element = fixture('SuccessResponseTestFixture');
+        assert.equal(element.$.saveButton.hidden, true);
+        assert.equal(element.$.cancelButton.hidden, true);
+      });
+
+      test("on load, loading spinner is hidden", () => {
+        const element = fixture('SuccessResponseTestFixture');
+        assert.equal(element.$.loading.hidden, true);
+      });
+
+      test("when field is clicked, text input is displayed", () => {
+        const element = fixture('SuccessResponseTestFixture');
+        element.$.displayValue.click();
+        assert.equal(element.$.textInput.hidden, false);
+      });
+      
+      test("when field is clicked, element value is hidden", () => {
+        const element = fixture('SuccessResponseTestFixture');
+        element.$.displayValue.click();
+        assert.equal(element.$.displayValue.style.display==="none", true);
+      });
+
+      test("when field is clicked, buttons are displayed", () => {
+        const element = fixture('SuccessResponseTestFixture');
+        element.$.displayValue.click();
+        assert.equal(element.$.saveButton.hidden, false);
+        assert.equal(element.$.cancelButton.hidden, false);
+      });
+
+      test("changing the text in the input alone does not update the element's value", () => {
+        const element = fixture('SuccessResponseTestFixture');
+        element.$.displayValue.click();
+        element.inputValue = "New Value";
+        assert.equal(element.value, "Initial value");
+      });
+
+      test("cancelling an edit displays the element's original value", () => {
+        const element = fixture('SuccessResponseTestFixture');
+        element.$.displayValue.click();
+        element.inputValue = "New Value";
+        element.$.cancelButton.click();
+        assert.equal(element.$.displayValue.style.display==="none", false);
+        assert.equal(element.$.textInput.hidden, true);
+        assert.equal(element.value, 'Initial value');
+      });
+
+    });
+
+
+    // button text tests
+    suite('button text tests', () => {
+
+      test("buttons have default text, if not provided", () => {
+        const element = fixture('SuccessResponseTestFixture');
+        assert.equal(element.$.saveButton.innerHTML, "OK");
+        assert.equal(element.$.cancelButton.innerHTML, "Cancel");
+      });
+
+      test("buttons can be instantiated with custom text", () => {
+        const element = fixture('ButtonTextTestFixture');
+        assert.equal(element.$.saveButton.innerHTML, "Update");
+        assert.equal(element.$.cancelButton.innerHTML, "Discard");
+      });
+           
+    });
+
+
+    // save value tests
+    suite('save value tests', () => {
+      var ajax, request, server;
+
+      setup(function () {
+        var headers = { 'Content-Type': 'application/json' };
+        server = sinon.fakeServer.create();
+        server.respondWith('POST', /\/success/, [200, headers, '{"success":true, "message":"Updated"}']);
+        server.respondWith('POST', /\/fail/, [400, headers, '{"success":false, "message":"Invalid data"}']);
+      });
+
+      teardown(function () { server.restore(); });
+
+
+      test("clicking save when no change has been made, does not result in a request being made", () => {
+        const element = fixture('SuccessResponseTestFixture');
+        element.$.displayValue.click();
+        element.inputValue = "Initial value";
+        element.$.saveButton.click();
+        assert.equal(server.requests.length, 0);
+        assert.equal(element.$.displayValue.style.display==="none", false);
+        assert.equal(element.$.textInput.hidden, true);
+      });
+
+      test("saving an edit displays the loading spinner", () => {
+        const element = fixture('SuccessResponseTestFixture');
+        element.$.displayValue.click();
+        element.inputValue = "New Value";
+        element.$.saveButton.click();
+        assert.equal(element.$.loading.hidden, false);
+      });
+
+      test("a successful save response hides the loading spinner", (done) => {
+        const element = fixture('SuccessResponseTestFixture');
+        element.$.displayValue.click();
+        element.inputValue = "New Value";
+        element.$.saveButton.click();
+        server.respond();
+        flush(function () {
+          assert.equal(element.$.loading.hidden, true);
+          done();
+        });
+      });      
+
+      test("a successful save request updates the element's value", (done) => {
+        const element = fixture('SuccessResponseTestFixture');
+        element.$.displayValue.click();
+        element.inputValue = "New value";
+        element.$.saveButton.click();
+        server.respond();
+        flush(function () {
+          assert.equal(element.$.textInput.hidden, true);
+          assert.equal(element.$.displayValue.style.display==="none", false);
+          assert.equal(element.value, "New value");
+          done();
+        });
+      });
+
+      
+      test("an unsuccessful save request sets the 'error' class on the text input", (done) => {
+        const element = fixture('ErrorResponseTestFixture');
+        element.$.displayValue.click();
+        element.inputValue = "New value";
+        element.$.saveButton.click();
+        server.respond();
+        flush(function () {
+          assert.include(Array.from(element.$.textInput.classList), "error");
+          done();
+        });
+      });
+
+      test("an unsuccessful save request does not update the element's value", (done) => {
+        const element = fixture('ErrorResponseTestFixture');
+        element.$.displayValue.click();
+        element.inputValue = "New value";
+        element.$.saveButton.click();
+        server.respond();
+        flush(function () {
+          assert.equal(element.$.textInput.hidden, false);
+          assert.equal(element.$.displayValue.style.display==="none", true);
+          assert.equal(element.value, "Initial value");
+          done();
+        });
+      });
+      
+    });
+
+
+    // hidden buttons tests
+    suite('hide buttons tests', () => {
+      var ajax, request, server;
+
+      setup(function () {
+        var headers = { 'Content-Type': 'application/json' };
+        server = sinon.fakeServer.create();
+        server.respondWith('POST', /\/success/, [200, headers, '{"success":true, "message":"Updated"}']);
+        server.respondWith('POST', /\/fail/, [400, headers, '{"success":false, "message":"Invalid data"}']);
+      });
+      
+      teardown(function () { server.restore(); });
+
+      
+      test("on load, buttons are hidden", () => {
+        const element = fixture('NoButtonsTestFixture');
+        assert.equal(element.$.saveButton.hidden, true);
+        assert.equal(element.$.cancelButton.hidden, true);
+      });
+
+      test("buttons remain hidden when field is clicked", () => {
+        const element = fixture('NoButtonsTestFixture');
+        element.$.displayValue.click();
+        assert.equal(element.$.saveButton.hidden, true);
+        assert.equal(element.$.cancelButton.hidden, true);
+      });
+      
+      test("value is saved upon blur", (done) => {
+        const element = fixture('NoButtonsTestFixture');
+        element.$.displayValue.click();
+        element.$.textInput.dispatchEvent(new Event("focus"));
+        element.inputValue = "New value";
+        element.$.textInput.dispatchEvent(new Event("blur"));
+        server.respond();
+        flush(function () {
+          assert.equal(element.$.textInput.hidden, true);
+          assert.equal(element.$.displayValue.style.display==="none", false);
+          assert.equal(element.value, "New value");
+          done();
+        });
+      });
+      
+      test("blurring after making no changes does not result in a request being made", () => {
+        const element = fixture('NoButtonsTestFixture');
+        element.$.displayValue.click();
+        element.$.textInput.dispatchEvent(new Event("focus"));
+        element.inputValue = "Initial value";
+        element.$.textInput.dispatchEvent(new Event("blur"));
+        assert.equal(server.requests.length, 0);
+        assert.equal(element.$.displayValue.style.display==="none", false);
+        assert.equal(element.$.textInput.hidden, true);
+      });
+
+    });
+
+    
+    // validation tests
+    suite('validation tests', () => {
+      var ajax, request, server;
+
+      setup(function () {
+        var headers = { 'Content-Type': 'application/json' };
+        server = sinon.fakeServer.create();
+        server.respondWith('POST', /\/success/, [200, headers, '{"success":true, "message":"Updated"}']);
+        server.respondWith('POST', /\/fail/, [400, headers, '{"success":false, "message":"Invalid data"}']);
+      });
+      
+      teardown(function () { server.restore(); });
+
+      
+      test("custom validation method is called", () => {
+        const element = fixture('ValidationTestFixture');
+        
+        var validationTriggered = false;
+        element._setValidationFunction(function(input) {
+          validationTriggered = true;
+        });
+        
+        element.$.displayValue.click();
+        element.inputValue = "New value";
+        element.$.saveButton.click();
+        assert.equal(validationTriggered, true);
+      });
+
+      test("invalid input does not result in a save request being made", () => {
+        const element = fixture('ValidationTestFixture');
+        
+        element._setValidationFunction(function(input) {
+          return (input.length >= 5);
+        });
+
+        element.$.displayValue.click();
+        element.inputValue = "1234";
+        element.$.saveButton.click();
+        assert.equal(server.requests.length, 0);
+      });
+
+      test("invalid input does not change the element's value", (done) => {
+        const element = fixture('ValidationTestFixture');
+        
+        element._setValidationFunction(function(input) {
+          return (input.length >= 5);
+        });
+
+        element.$.displayValue.click();
+        element.inputValue = "1234";
+        element.$.saveButton.click();
+        flush(function() {
+          assert.equal(element.value, "Initial value");
+          done();
+        });
+      });
+
+      test("invalid input sets the 'error' class on the text input", () => {
+        const element = fixture('ValidationTestFixture');
+
+        element._setValidationFunction(function(input) {
+          return (input.length >= 5);
+        });
+
+        element.$.displayValue.click();
+        element.inputValue = "1234";
+        element.$.saveButton.click();
+        assert.include(Array.from(element.$.textInput.classList), "error");        
+      });
+
+      test("valid input results in a save being made", (done) => {
+        const element = fixture('ValidationTestFixture');
+        
+        element._setValidationFunction(function(input) {
+          return (input.length >= 5);
+        });
+
+        element.$.displayValue.click();
+        element.inputValue = "12345";
+        element.$.saveButton.click();
+        server.respond();
+        flush(function () {
+          assert.equal(element.$.textInput.hidden, true);
+          assert.equal(element.$.displayValue.style.display==="none", false);
+          assert.equal(element.value, "12345");
+          done();
+        });   
+      });
+
+    });
+    
+    
+    // custom response handler tests
+    suite('custom response handler tests', () => {
+      var ajax, request, server;
+
+      setup(function () {
+        var headers = { 'Content-Type': 'application/json' };
+        server = sinon.fakeServer.create();
+        server.respondWith('POST', /\/success/, [200, headers, '{"success":true, "message":"Updated"}']);
+        server.respondWith('POST', /\/fail/, [400, headers, '{"success":false, "message":"Invalid data"}']);
+      });
+      
+      teardown(function () { server.restore(); });
+
+      
+      test("custom success response callback method is called", (done) => {
+        const element = fixture('SuccessResponseTestFixture');
+        
+        var responseMessage;
+        element._setSuccessResponseFunction(function(response) {
+          responseMessage = response.message;
+        });
+
+        element.$.displayValue.click();
+        element.inputValue = "New value";
+        element.$.saveButton.click();
+        server.respond();
+        flush(function () {
+          assert.equal(responseMessage, "Updated");
+          done();
+        });        
+      });
+            
+      test("custom error response callback method is called", (done) => {
+        const element = fixture('ErrorResponseTestFixture');
+        
+        var statusCode, responseMessage;
+        element._setErrorResponseFunction(function(response, status) {
+          responseMessage = response.message;
+          statusCode = status;
+        });
+
+        element.$.displayValue.click();
+        element.inputValue = "New value";
+        element.$.saveButton.click();
+        server.respond();
+        flush(function () {
+          assert.equal(responseMessage, "Invalid data");
+          assert.equal(statusCode, 400);
+          done();
+        });     
+      });
+
+    });
+  </script>
+
+</body>
+
+</html>

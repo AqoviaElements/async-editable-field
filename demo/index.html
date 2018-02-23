@@ -1,0 +1,173 @@
+<!doctype html>
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1, user-scalable=yes">
+
+  <title>async-editable-field demo</title>
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
+  
+  <script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"></script>
+  <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+  <link rel="import" href="demo-snippet.html">
+  <link rel="import" href="../async-editable-field.html">
+
+  <style is="custom-style" include="demo-pages-shared-styles">
+    body {
+      /* font-family: 'Open Sans', sans-serif !important; */
+      font: 400 13.3333px Arial;
+    }
+
+    demo-snippet.horizontal {
+      --demo-snippet-demo: {
+        @apply(--layout-horizontal);
+        @apply(--layout-justified);
+        @apply(--layout-wrap);
+      }
+    }
+
+    .vertical-section-container {
+      max-width: 800px;
+      margin: auto;
+    }
+
+    .demo-wrapper {
+      width: 370px;
+      float: left;
+      margin: 7px;
+    }
+
+    .demo-script {
+      background-color: rgb(255, 251, 251);
+      margin-top: -25px;
+    }
+  </style>
+</head>
+
+<body unresolved>
+  <div class="vertical-section-container centered">
+    <div class='demo-wrapper'>
+      <h3>Basic usage</h3>
+      <demo-snippet>
+        <template>
+          <async-editable-field value="Value"></async-editable-field>
+        </template>
+      </demo-snippet>
+    </div>
+
+    <div class='demo-wrapper'>
+      <h3>With custom button labels</h3>
+      <demo-snippet>
+        <template>
+          <async-editable-field value="Valor" save-text="Salvar" cancel-text="Cancelar"></async-editable-field>
+        </template>
+      </demo-snippet>
+    </div>
+
+    <div class='demo-wrapper'>
+      <h3>With url being set</h3>
+      <demo-snippet>
+        <template>
+          <async-editable-field value="Value" name="myValue" url="http://localhost:8085"></async-editable-field>
+        </template>
+      </demo-snippet>
+    </div>
+    
+    <div class='demo-wrapper'>
+      <h3>With no buttons and save on blur</h3>
+      <demo-snippet>
+        <template>
+          <async-editable-field value="Value" name="myValue" url="http://localhost:8085" hide-save-button hide-cancel-button save-on-blur></async-editable-field>
+        </template>
+      </demo-snippet>
+    </div>
+
+    <div class='demo-wrapper'>
+      <h3>With custom request response functions</h3>
+      <demo-snippet>
+        <template>
+          <async-editable-field id="withCustomResponse" value="Value" url="http://localhost:8085"></async-editable-field>
+        </template>
+        <script>
+            var editableField = document.querySelector('#withCustomResponse');
+            
+            editableField._setSuccessResponseFunction(function(response) {
+              alert("Success: " + response);
+            });
+
+            editableField._setErrorResponseFunction(function(response, status) {
+              alert("[" + status + "] " + response);
+            });
+          </script>
+      </demo-snippet>
+
+      <pre class="prettyprint demo-script">
+&lt;script type="text/javascript"&gt;
+  var editableField = 
+    document.querySelector('#withCustomResponse');
+  
+  editableField
+    ._setSuccessResponseFunction(
+      function(response) {
+        alert("Success: " + response);
+      }
+    );
+  
+  editableField
+    ._setErrorResponseFunction(
+      function(response, status) {
+        alert("[" + status + "] " + response);
+      }
+    );
+&lt;/script&gt;
+      </pre>
+
+    </div>
+
+    <div class='demo-wrapper'>
+      <h3>With validation</h3>
+      <demo-snippet>
+        <template>
+          <async-editable-field id="withValidation" value="Value" url="http://localhost:8085"></async-editable-field>
+        </template>
+        <script>
+            document.querySelector('#withValidation')._setValidationFunction(function(value) {
+              var reg = new RegExp(/^\d+$/);
+              if (!reg.test(value)) {
+                alert("Value must only contain numbers!");
+                return false;
+              }
+              return true;
+            });
+          </script>
+      </demo-snippet>
+      <pre class="prettyprint demo-script">
+&lt;script type="text/javascript"&gt;
+  document.querySelector('#withValidation')
+    ._setValidationFunction(function(value) {
+      var reg = new RegExp(/^\d+$/);
+      if (!reg.test(value)) {
+        alert("Value must only contain numbers!");
+        return false;
+      }
+      return true;
+    });
+&lt;/script&gt;
+      </pre>
+    </div>
+
+  </div>
+</body>
+
+</html>
