@@ -31,7 +31,7 @@
     id="myField"
     name="fieldName"
     value="Field Value" 
-    url="http://localhost:8085/endpoint/"
+    url="http://httpstat.us/200?sleep=750"
     save-text="Update"
     cancel-text="Cancel">
 </async-editable-field>
@@ -39,15 +39,15 @@
 <script>
     var editableField = document.querySelector('async-editable-field#myField');
 
-    editableField._setSuccessResponseFunction(function(response) {
+    editableField.setSuccessResponseCallback(function(response) {
       alert("Success: " + response);
     });
 
-    editableField._setErrorResponseFunction(function(response, status) {
+    editableField.setErrorResponseCallback(function(response, status) {
       alert("[" + status + "] Response: " + response);
     });
         
-    editableField._setValidationFunction(function(value) {
+    editableField.setValidationFunction(function(value) {
         var reg = new RegExp(/^\d+$/);
         if (!reg.test(value)) {
             alert("Value must only contain numbers!");

@@ -17,6 +17,10 @@
       #errorMark {
         color: red;
       }
+      #warning {
+        color: red;
+        padding-top: 5px;
+      }
       #validMark {
         color: #99CA3C;
       }
@@ -29,17 +33,21 @@
         border-radius: 3px;
         border: solid 1px #4DC1E8;
       }
+      #loading {
+        position: absolute;
+        padding-left: 10px;
+      }
       button {
-        background-color: #99CA3C;
-        color: #fff;
+        background-color: var(--button-color, #99CA3C);
+        color: var(--button-text-color, #fff);
         border: none;
         min-width: 69px;
         height: 24px;
       }
       button:disabled {
-        background-color: #C2E08A;
+        background-color: var(--disabled-button-color, #C2E08A);
       }
-      #displayValue, #textInput, button {
+      #displayValue, #textInput, #warning, button {
         font-family: Arial, Helvetica, sans-serif;
         font-size: 12px;
       }
@@ -57,6 +65,7 @@
     </span>
     <button id="saveButton" hidden$="{{_shouldHideButtons(editing, loading, hideSaveButton)}}" disabled$="{{_shouldDisableSaveButton(inputValue)}}" on-tap="save">{{saveText}}</button>
     <button id="cancelButton" hidden$="{{_shouldHideButtons(editing, loading, hideCancelButton)}}" on-tap="cancelEdit">{{cancelText}}</button>
+    <div id="warning" hidden$="{{!error}}">{{warningText}}</div>
   </template>
 
   <script>
@@ -93,6 +102,10 @@
           type: String,
           value: null
         },
+        warningText: {
+          type: String,
+          value: null
+        },
         hideSaveButton: {
           type: Boolean,
           value: false
@@ -102,6 +115,10 @@
           value: false
         },
         disableClickToEdit: {
+          type: Boolean,
+          value: false
+        },
+        readonly: {
           type: Boolean,
           value: false
         },
@@ -143,19 +160,26 @@
           value: null,
           readOnly: true
         },
-        successResponseFunction: {
+        successResponseCallback: {
           type: Function,
           value: null,
-          readOnly: true          
+          readOnly: true
         },
-        errorResponseFunction: {
+        errorResponseCallback: {
           type: Function,
           value: null,
-          readOnly: true          
+          readOnly: true
         }
       },
 
-      validate: function() {     
+      setSuccessResponseCallback: function(func) { this._setSuccessResponseCallback(func); },
+      setErrorResponseCallback: function(func) { this._setErrorResponseCallback(func); },
+      setValidationFunction: function(func) { this._setValidationFunction(func); },
+
+      validate: function() {
+        if (this.readonly)
+          return false;
+
         if (!this.validationFunction)
           return true;
 
@@ -185,6 +209,9 @@
       },
 
       editValue: function() {
+        if (this.readonly)
+          return;
+
         this._setEditing(true);
         this.inputValue = "";
       },
@@ -209,16 +236,16 @@
       _handleResponse: function(e) {
         this._saveEdit();
 
-        if (this.successResponseFunction)
-          this.successResponseFunction(e.detail.response);
+        if (this.successResponseCallback)
+          this.successResponseCallback(e.detail.response);
       },
 
       _handleErrorResponse: function(e) {
         this._setLoading(false);
         this._setError(true);
-
-        if (this.errorResponseFunction)
-          this.errorResponseFunction(e.detail.request.xhr.response, e.detail.request.status);
+        
+        if (this.errorResponseCallback)
+          this.errorResponseCallback(e.detail.request.xhr.response, e.detail.request.status);
       },
 
       _handleKeyDown: function(e) {
