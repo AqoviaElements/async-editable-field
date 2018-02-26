@@ -50,6 +50,12 @@
       <async-editable-field value="Initial value" url="/success"></async-editable-field>
     </template>
   </test-fixture>
+
+  <test-fixture id="WarningTextTestFixture">
+    <template>
+      <async-editable-field value="Initial value" url="/fail" warning-text="There is a problem with your input"></async-editable-field>
+    </template>
+  </test-fixture>
   
   <script>
     // element display tests
@@ -443,6 +449,88 @@
           assert.equal(statusCode, 400);
           done();
         });     
+      });
+
+    });
+
+
+    // warning text tests
+    suite('warning text tests', () => {
+      var ajax, request, server;
+
+      setup(function () {
+        var headers = { 'Content-Type': 'application/json' };
+        server = sinon.fakeServer.create();
+        server.respondWith('POST', /\/success/, [200, headers, '{"success":true, "message":"Updated"}']);
+        server.respondWith('POST', /\/fail/, [400, headers, '{"success":false, "message":"Invalid data"}']);
+      });
+      
+      teardown(function () { server.restore(); });
+
+
+      test("on load, warning text should not show", () => {
+        const element = fixture('WarningTextTestFixture');
+        assert.equal(element.$.warning.hidden, true);
+      });
+      
+      test("warning text should not show when entering editing mode", () => {
+        const element = fixture('WarningTextTestFixture');
+        element.$.displayValue.click();
+        assert.equal(element.$.warning.hidden, true);
+      });
+
+      test("warning text can be set during validation", () => {
+        const element = fixture('WarningTextTestFixture');
+        
+        element.setValidationFunction(function(input) {
+          if (input.length < 5) {
+            element.warningText = "Input must be at least 5 characters";
+            return false;
+          }
+          return true;
+        });
+
+        element.$.displayValue.click();
+        element.inputValue = "1234";
+        element.$.saveButton.click();
+        assert.equal(element.$.warning.innerHTML, "Input must be at least 5 characters");
+        assert.equal(element.$.warning.hidden, false);
+      });
+            
+      test("warning text can be set inside an error response callback", (done) => {
+        const element = fixture('WarningTextTestFixture');
+        
+        element.setErrorResponseCallback(function(response, status) {
+          element.warningText = "There was an error with your value";
+        });
+
+        element.$.displayValue.click();
+        element.inputValue = "New value";
+        element.$.saveButton.click();
+        server.respond();
+        flush(function () {
+          assert.equal(element.$.warning.innerHTML, "There was an error with your value");
+          assert.equal(element.$.warning.hidden, false);
+          done();
+        });     
+      });
+
+      test("warning text should not show if not in editing and error state", () => {
+        const element = fixture('WarningTextTestFixture');
+        
+        element.setValidationFunction(function(input) {
+          if (input.length >= 5) {
+            element.warningText = "Input must be at least 5 characters";
+            return false;
+          }
+          return true;
+        });
+
+        element.$.displayValue.click();
+        element.inputValue = "1234";
+        element.$.saveButton.click();
+        element.$.cancelButton.click();
+        assert.equal(element.$.warning.hidden, true);
       });
 
     });

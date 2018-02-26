@@ -17,6 +17,10 @@
       #errorMark {
         color: red;
       }
+      #warning {
+        color: red;
+        padding-top: 5px;
+      }
       #validMark {
         color: #99CA3C;
       }
@@ -43,7 +47,7 @@
       button:disabled {
         background-color: var(--disabled-button-color, #C2E08A);
       }
-      #displayValue, #textInput, button {
+      #displayValue, #textInput, #warning, button {
         font-family: Arial, Helvetica, sans-serif;
         font-size: 12px;
       }
@@ -61,6 +65,7 @@
     </span>
     <button id="saveButton" hidden$="{{_shouldHideButtons(editing, loading, hideSaveButton)}}" disabled$="{{_shouldDisableSaveButton(inputValue)}}" on-tap="save">{{saveText}}</button>
     <button id="cancelButton" hidden$="{{_shouldHideButtons(editing, loading, hideCancelButton)}}" on-tap="cancelEdit">{{cancelText}}</button>
+    <div id="warning" hidden$="{{!error}}">{{warningText}}</div>
   </template>
 
   <script>
@@ -94,6 +99,10 @@
           value: 'Cancel'
         },
         url: {
+          type: String,
+          value: null
+        },
+        warningText: {
           type: String,
           value: null
         },
@@ -234,7 +243,7 @@
       _handleErrorResponse: function(e) {
         this._setLoading(false);
         this._setError(true);
-
+        
         if (this.errorResponseCallback)
           this.errorResponseCallback(e.detail.request.xhr.response, e.detail.request.status);
       },

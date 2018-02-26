@@ -88,7 +88,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       <h3>With a URL for asynchronous saving</h3>
       <demo-snippet>
         <template>
-          <async-editable-field name="myProperty" value="Value" name="myValue" url="http://localhost:8085"></async-editable-field>
+          <async-editable-field name="myProperty" value="Value" name="myValue" url="http://httpstat.us/200?sleep=750"></async-editable-field>
         </template>
       </demo-snippet>
     </div>
@@ -97,7 +97,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       <h3>With no buttons and saving on-blur</h3>
       <demo-snippet>
         <template>
-          <async-editable-field value="Value" name="myValue" url="http://localhost:8085" hide-save-button hide-cancel-button save-on-blur></async-editable-field>
+          <async-editable-field value="Value" name="myValue" url="http://httpstat.us/200?sleep=750" hide-save-button hide-cancel-button save-on-blur></async-editable-field>
         </template>
       </demo-snippet>
     </div>
@@ -106,7 +106,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       <h3>With custom button colors</h3>
       <demo-snippet>
         <template>
-          <async-editable-field id="withCustomButtons" value="Value" name="myValue" url="http://localhost:8085"></async-editable-field>
+          <async-editable-field id="withCustomButtons" value="Value" name="myValue" url="http://httpstat.us/200?sleep=750"></async-editable-field>
         </template>
         <style>
           #withCustomButtons {
@@ -133,7 +133,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       <h3>With custom request response callbacks</h3>
       <demo-snippet>
         <template>
-          <async-editable-field id="withCustomResponse" name="myProperty" value="Value" url="http://localhost:8085"></async-editable-field>
+          <async-editable-field id="withCustomResponse" name="myProperty" value="Value" url="http://httpstat.us/200?sleep=750"></async-editable-field>
         </template>
         <script>
             var editableField = document.querySelector('#withCustomResponse');
@@ -172,16 +172,18 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     </div>
 
     <div class='demo-wrapper'>
-      <h3>With validation</h3>
+      <h3>With validation, using warning text</h3>
       <demo-snippet>
         <template>
-          <async-editable-field id="withValidation" name="myProperty" value="Value" url="http://localhost:8085"></async-editable-field>
+          <async-editable-field id="withValidation" name="myProperty" value="Value" url="http://httpstat.us/200?sleep=750"></async-editable-field>
         </template>
         <script>
-            document.querySelector('#withValidation').setValidationFunction(function(value) {
+            var editableField = document.querySelector('#withValidation');
+            
+            editableField.setValidationFunction(function(value) {
               var reg = new RegExp(/^\d+$/);
               if (!reg.test(value)) {
-                alert("Value must only contain numbers!");
+                editableField.warningText = "Value must only contain numbers!";
                 return false;
               }
               return true;
@@ -190,13 +192,19 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       </demo-snippet>
       <pre class="prettyprint demo-script">
 &lt;script type="text/javascript"&gt;
-  document.querySelector('#withValidation')
+  var editableField = 
+    document.querySelector('#withValidation');
+              
+  editableField
     .setValidationFunction(function(value) {
       var reg = new RegExp(/^\d+$/);
+      
       if (!reg.test(value)) {
-        alert("Value must only contain numbers!");
+        editableField.warningText = 
+          "Value must only contain numbers!";
         return false;
       }
+
       return true;
     });
 &lt;/script&gt;

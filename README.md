@@ -31,7 +31,7 @@
     id="myField"
     name="fieldName"
     value="Field Value" 
-    url="http://localhost:8085/endpoint/"
+    url="http://httpstat.us/200?sleep=750"
     save-text="Update"
     cancel-text="Cancel">
 </async-editable-field>
