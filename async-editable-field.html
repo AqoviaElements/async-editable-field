@@ -33,7 +33,7 @@
         border-radius: 3px;
         border: solid 1px #4DC1E8;
       }
-      #loading {
+      #spinner {
         position: absolute;
         padding-left: 10px;
       }
@@ -55,17 +55,19 @@
 
     <iron-ajax id="ajaxRequest" url$="{{url}}" method="post" content-type="application/json" body$="{{requestBody}}" handle-as="json"
       on-response="_handleResponse" on-error="_handleErrorResponse"></iron-ajax>
+    <iron-ajax id="pollRequest" url$="{{pollingUrl}}" method="get" content-type="application/json" handle-as="json"
+      on-response="_handlePollResponse" on-error="_handlePollErrorResponse"></iron-ajax>
     <span id="displayValue" style$="display:{{_getValueDisplayStyle(editing)}}" on-tap="_handleFieldClick">{{value}}</span>
-    <input id="textInput" hidden$="{{!editing}}" value="{{inputValue::input}}" placeholder$="{{value}}" on-keyup="_handleKeyUp"
+    <input id="textInput" hidden$="{{!editing}}" readonly$="{{_isBusy(requestInProgress, polling)}}" value="{{newValue::input}}" placeholder$="{{value}}" on-keyup="_handleKeyUp"
        on-blur="_handleBlur" />
-    <span id="errorMark" hidden$="{{!error}}">&#10006;</span>
-    <span id="validMark" hidden$="{{!_shouldShowValidMark(editing, error, inputValue)}}">&#10003;</span>
-    <span id="loading" hidden$="{{!loading}}">
+    <span id="errorMark" hidden$="{{!_shouldShowErrorMark(error, invalid)}}">&#10006;</span>
+    <span id="validMark" hidden$="{{!_shouldShowValidMark(editing, error, invalid, newValue, validateWhileTyping)}}">&#10003;</span>
+    <span id="spinner" hidden$="{{!_isBusy(requestInProgress, polling)}}">
       <paper-spinner active></paper-spinner>
     </span>
-    <button id="saveButton" hidden$="{{_shouldHideButtons(editing, loading, hideSaveButton)}}" disabled$="{{_shouldDisableSaveButton(inputValue, error)}}" on-tap="save">{{saveText}}</button>
-    <button id="cancelButton" hidden$="{{_shouldHideButtons(editing, loading, hideCancelButton)}}" on-tap="cancelEdit">{{cancelText}}</button>
-    <div id="warning" hidden$="{{_shouldHideWarning(editing, error, warningText)}}">{{warningText}}</div>
+    <button id="saveButton" hidden$="{{_shouldHideButtons(editing, requestInProgress, polling, hideSaveButton)}}" disabled$="{{_shouldDisableSaveButton(newValue, invalid)}}" on-tap="save">{{saveText}}</button>
+    <button id="cancelButton" hidden$="{{_shouldHideButtons(editing, requestInProgress, polling, hideCancelButton)}}" on-tap="cancelEdit">{{cancelText}}</button>
+    <div id="warning" hidden$="{{!_shouldShowWarning(editing, error, invalid, warningText)}}">{{warningText}}</div>
   </template>
 
   <script>
@@ -102,6 +104,36 @@
           type: String,
           value: null
         },
+        pollingUrl: {
+          type: String,
+          value: null
+        },
+        polling: {
+          type: Boolean,
+          value: false
+        },
+        pollingFrequency: {
+          type: Number,
+          value: 1
+        },
+        pollInProgress: {
+          type: Boolean,
+          value: false,
+          readOnly: true
+        },
+        pollingRetries: {
+          type: Number,
+          value: 10,
+        },
+        failedPollAttempts: {
+          type: Number,
+          value: 0,
+          readOnly: true
+        },
+        _intervalId: {
+          type: Number,
+          value: null
+        },
         warningText: {
           type: String,
           value: null
@@ -130,7 +162,7 @@
           type: Boolean,
           value: false
         },
-        inputValue: {
+        newValue: {
           type: String,
           value: ""
         },
@@ -144,7 +176,7 @@
           value: false,
           readOnly: true
         },
-        loading: {
+        requestInProgress: {
           type: Boolean,
           value: false,
           readOnly: true
@@ -154,26 +186,37 @@
           value: false,
           readOnly: true
         },
+        invalid: {
+          type: Boolean,
+          value: false,
+          readOnly: true
+        },
         validationFunction: {
           type: Function,
-          value: null,
-          readOnly: true
+          value: null
         },
         successResponseCallback: {
           type: Function,
-          value: null,
-          readOnly: true
+          value: null
         },
         errorResponseCallback: {
           type: Function,
-          value: null,
-          readOnly: true
+          value: null
+        },
+        pollingCompleteCallback: {
+          type: Function,
+          value: null
+        },
+        pollingFailedCallback: {
+          type: Function,
+          value: null
         }
       },
 
-      setSuccessResponseCallback: function(func) { this._setSuccessResponseCallback(func); },
-      setErrorResponseCallback: function(func) { this._setErrorResponseCallback(func); },
-      setValidationFunction: function(func) { this._setValidationFunction(func); },
+      ready: function() {
+        if (this.polling)
+          this._startPolling();
+      },
 
       validate: function() {
         if (this.readonly)
@@ -182,11 +225,11 @@
         if (!this.validationFunction)
           return true;
 
-        if (this.validationFunction(this.inputValue)) {
-          this._setError(false);
+        if (this.validationFunction(this.newValue)) {
+          this._setInvalid(false);
           return true;
         } else {
-          this._setError(true);
+          this._setInvalid(true);
           return false;
         }
       },
@@ -195,14 +238,14 @@
         if (!this.validate())
             return;
 
-        if (this.inputValue == this.value || !this.url) {
+        if (this.newValue == this.value || !this.url) {
           this._saveEdit();
           return;
         }
 
         this._setError(false);
-        this._setLoading(true);
-        this._setRequestBody('{ "' + this.name + '": "' + this.inputValue + '" }');
+        this._setRequestInProgress(true);
+        this._setRequestBody('{ "' + this.name + '": "' + this.newValue + '" }');
         this.$.ajaxRequest.generateRequest();
       },
 
@@ -211,54 +254,111 @@
           return;
 
         this._setEditing(true);
-        this.inputValue = "";
+        this.newValue = "";
       },
 
       cancelEdit: function() {
-        this.inputValue = this.value;
+        this.newValue = this.value;
         this._finishEdit();
       },
 
       _saveEdit() {
-        this.value = this.inputValue;
+        this.value = this.newValue;
         this._finishEdit();
       },
 
       _finishEdit: function() {
-        this._setLoading(false);
         this._setEditing(false);
         this._setError(false);
+        this._setInvalid(false);
       },
 
       _handleResponse: function(e) {
-        this._saveEdit();
-
+        this._setRequestInProgress(false);
+        if (e.detail.xhr.status == 201) {
+          this.pollingUrl = e.detail.xhr.getResponseHeader("Location");
+          this._startPolling();
+        } else {
+          this._saveEdit();
+        }
+        
         if (this.successResponseCallback)
-          this.successResponseCallback(e.detail.response);
+          this.successResponseCallback(e.detail.response, e.detail.xhr);
       },
 
       _handleErrorResponse: function(e) {
-        this._setLoading(false);
+        this._setRequestInProgress(false);
         this._setError(true);
         
         if (this.errorResponseCallback)
           this.errorResponseCallback(e.detail.request.xhr.response, e.detail.request.status);
       },
 
+      _startPolling: function() {
+        if (!this.pollingUrl)
+          return;
+        
+        this.polling = true;
+        this._intervalId = setInterval(
+          function() {
+            if (this.pollInProgress)
+              return;
+            this.pollInProgress = true;
+            this.$.pollRequest.generateRequest();              
+          }.bind(this),
+          this.pollingFrequency*1000
+        );
+      },
+
+      _stopPolling: function() {
+        clearInterval(this._intervalId);
+        this.polling = false;
+        this.pollInProgress = false;
+      },
+
+      _handlePollResponse: function(e) {
+        var response = e.detail.response;
+
+        if (response.complete == true) {
+          this._stopPolling();
+          
+          if (response.success)
+            this._saveEdit();
+          else
+            this._setError(true);
+          
+          if (this.pollingCompleteCallback)
+            this.pollingCompleteCallback(response);
+        } else
+          this.pollInProgress = false;
+      },
+
+      _handlePollErrorResponse: function(e) {
+        this._setFailedPollAttempts(this.failedPollAttempts + 1);
+        
+        if (this.failedPollAttempts >= this.pollingRetries) {
+          this._stopPolling();
+          this._setError(true);
+          if (this.pollingFailedCallback)
+            this.pollingFailedCallback();
+          else
+            console.error("Polling retry limit exceeded");
+        } else {
+          this.pollInProgress = false;
+        }
+      },
+
       _handleKeyUp: function(e) {
-        if (e.keyCode === 13 && this.inputValue) // enter/return key
+        if (e.keyCode === 13 && this.newValue) // enter/return key
           this.save();
         else if (e.keyCode === 27) // escape key
           this.cancelEdit();
         else {
           this._setError(false);
+          this._setInvalid(false);
           if (this.validateWhileTyping)
             this.validate();
         }
-      },
-
-      _shouldShowValidMark: function(editing, error, inputValue) {
-        return editing && !error && inputValue;
       },
 
       _handleFieldClick: function() {
@@ -270,22 +370,34 @@
         if (!this.saveOnBlur)
           return;
 
-        if (!this.inputValue || this.inputValue == this.value)
+        if (!this.newValue || this.newValue == this.value)
           this.cancelEdit();
         else
           this.save();
       },
 
-      _shouldHideButtons: function(editing, loading, hideButton) {
-        return !editing || loading || hideButton;
+      _shouldShowValidMark: function(editing, error, invalid, newValue, validateWhileTyping) {
+        return editing && !error && !invalid && newValue && validateWhileTyping;
+      },
+      
+      _shouldShowErrorMark: function(error, invalid) {
+        return error || invalid;
       },
 
-      _shouldDisableSaveButton: function(inputValue, error) {
-        return !inputValue || error;
+      _shouldShowWarning: function(editing, error, invalid, warningText) {
+        return editing && (error || invalid) && warningText;
       },
 
-      _shouldHideWarning: function(editing, error, warningText) {
-        return !editing || !error || !warningText;
+      _isBusy: function(requestInProgress, polling) {
+        return requestInProgress || polling;
+      },
+
+      _shouldHideButtons: function(editing, requestInProgress, polling, hideButton) {
+        return hideButton || !editing || requestInProgress || polling;
+      },
+
+      _shouldDisableSaveButton: function(newValue, invalid) {
+        return !newValue || invalid;
       },
 
       _getValueDisplayStyle(editing) {
