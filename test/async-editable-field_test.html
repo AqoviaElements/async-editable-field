@@ -15,9 +15,15 @@
 
 <body>
 
+  <test-fixture id="EditingTestFixture">
+    <template>
+      <async-editable-field value="Initial value" new-value="New value" url="/success" editing></async-editable-field>
+    </template>
+  </test-fixture>
+  
   <test-fixture id="SuccessResponseTestFixture">
     <template>
-      <async-editable-field value="Initial value" url="/success"></async-editable-field>
+      <async-editable-field value="Initial value" url="/success" polling-retries="10"></async-editable-field>
     </template>
   </test-fixture>
   
@@ -68,6 +74,12 @@
       <async-editable-field value="Initial value" url="/fail" warning-text="There is a problem with your input"></async-editable-field>
     </template>
   </test-fixture>
+
+  <test-fixture id="PollingUrlTestFixture">
+    <template>
+      <async-editable-field value="Initial value" value="New value" url="/success" polling-url="/poll/123" polling-retries="3"></async-editable-field>
+    </template>
+  </test-fixture>
   
   <script>
     // element display tests
@@ -78,13 +90,9 @@
         assert.equal(element.value, 'Initial value');
       });
 
-      test("on load, text input is hidden", () => {
+      test("on load, text input is hidden and value is displayed", () => {
         const element = fixture('SuccessResponseTestFixture');
         assert.equal(element.$.textInput.hidden, true);
-      });
-
-      test("on load, element value is displayed", () => {
-        const element = fixture('SuccessResponseTestFixture');
         assert.equal(element.$.displayValue.style.display==="none", false);
       });
 
@@ -97,6 +105,18 @@
       test("on load, spinner is hidden", () => {
         const element = fixture('SuccessResponseTestFixture');
         assert.equal(element.$.spinner.hidden, true);
+      });
+      
+      test("with editing set on load, element value is displayed and text is hidden", () => {
+        const element = fixture('EditingTestFixture');
+        assert.equal(element.$.textInput.hidden, false);
+        assert.equal(element.$.displayValue.style.display==="none", true);
+      });
+      
+      test("with editing set on load, text input and element values are set", () => {
+        const element = fixture('EditingTestFixture');
+        assert.equal(element.$.textInput.value, "New value");
+        assert.equal(element.value, "Initial value");
       });
 
       test("when field is clicked, text input is displayed", () => {
@@ -182,8 +202,8 @@
       setup(function () {
         var headers = { 'Content-Type': 'application/json' };
         server = sinon.fakeServer.create();
-        server.respondWith('POST', /\/success/, [200, headers, '{"success":true, "message":"Updated"}']);
-        server.respondWith('POST', /\/fail/, [400, headers, '{"success":false, "message":"Invalid data"}']);
+        server.respondWith('POST', '/success', [200, headers, '{"success":true, "message":"Updated"}']);
+        server.respondWith('POST', '/fail', [400, headers, '{"success":false, "message":"Invalid data"}']);
       });
 
       teardown(function () { server.restore(); });
@@ -270,8 +290,7 @@
       setup(function () {
         var headers = { 'Content-Type': 'application/json' };
         server = sinon.fakeServer.create();
-        server.respondWith('POST', /\/success/, [200, headers, '{"success":true, "message":"Updated"}']);
-        server.respondWith('POST', /\/fail/, [400, headers, '{"success":false, "message":"Invalid data"}']);
+        server.respondWith('POST', '/success', [200, headers, '{"success":true, "message":"Updated"}']);
       });
       
       teardown(function () { server.restore(); });
@@ -326,8 +345,7 @@
       setup(function () {
         var headers = { 'Content-Type': 'application/json' };
         server = sinon.fakeServer.create();
-        server.respondWith('POST', /\/success/, [200, headers, '{"success":true, "message":"Updated"}']);
-        server.respondWith('POST', /\/fail/, [400, headers, '{"success":false, "message":"Invalid data"}']);
+        server.respondWith('POST', '/success', [200, headers, '{"success":true, "message":"Updated"}']);
       });
       
       teardown(function () { server.restore(); });
@@ -435,7 +453,7 @@
         element.$.displayValue.click();
         element.newValue = "1234";
         element.$.saveButton.click();
-        flush(function() {
+        flush(function () {
           assert.equal(element.value, "Initial value");
           done();
         });
@@ -461,23 +479,181 @@
       });
 
     });
+
+
+    // polling tests
+    suite('polling tests', () => {
+      var ajax, request, server, clock;
+
+      setup(function () {
+        var headers = { 'Content-Type': 'application/json', 'Location': '/poll/123' };
+        var pollingHeaders = { 'Content-Type': 'application/json' };
+        server = sinon.fakeServer.create();
+        server.respondWith('POST', '/success', [201, headers, '{"message":"Task created"}']);
+        server.respondWith('GET', '/poll/123', [200, pollingHeaders, '{"complete": true, "success":true}']);  
+        clock = sinon.useFakeTimers();      
+      });
+
+      teardown(function () { 
+        server.restore(); 
+        clock.restore();
+      });
+
+
+      test("when a 201 is returned, the location header is used for polling", (done) => {
+        const element = fixture('SuccessResponseTestFixture');
+        element.$.displayValue.click();
+        element.newValue = "Updated value";
+        element.$.saveButton.click();
+        server.respond();
+        flush(function () {
+          assert.equal(element.pollingUrl, "/poll/123");
+          assert.equal(element.polling, true);
+          done();
+        });
+      });
+
+      test("when polling, the spinner displays", (done) => {
+        const element = fixture('SuccessResponseTestFixture');
+        element.$.displayValue.click();
+        element.newValue = "Updated value";
+        element.$.saveButton.click();
+        server.respond();
+        flush(function () {
+          assert.equal(element.$.spinner.hidden, false);
+          done();
+        });
+      });
+
+      test("element set with a polling url loads in polling state", () => {
+        const element = fixture('PollingUrlTestFixture');      
+        assert.equal(element.pollingUrl, "/poll/123");
+        assert.equal(element.polling, true);
+        assert.equal(element.$.spinner.hidden, false);
+      });
+      
+      test("element set with a polling url performs polling", (done) => {        
+        const element = fixture('PollingUrlTestFixture');        
+        clock.tick(1010);
+        flush(function () {
+          server.respond();
+          assert.equal(server.requests.length, 1);
+          done();
+        });        
+      });      
+
+      test("value is saved after a successful completed poll response", (done) => {
+        const element = fixture('SuccessResponseTestFixture');
+        element.$.displayValue.click();
+        element.newValue = "Updated value";
+        element.$.saveButton.click();
+        server.respond(); // 201 response
+        flush(function () {
+          clock.tick(1010);
+          assert.equal(server.requests.length, 2);
+          server.respond(); // poll response      
+          flush(function () {
+            assert.equal(element.polling, false);
+            assert.equal(element.$.spinner.hidden, true);
+            assert.equal(element.value, "Updated value");
+            assert.equal(element.$.textInput.hidden, true);
+            assert.equal(element.$.displayValue.style.display==="none", false);
+            done();
+          });
+        });
+      });
+
+      test("element stays in polling state if poll response does not return completed", (done) => {
+        server.respondWith('GET', '/poll/123', [200, { 'Content-Type': 'application/json' }, '{"complete": false, "success":false}']);
+
+        const element = fixture('SuccessResponseTestFixture');
+        element.$.displayValue.click();
+        element.newValue = "Updated value";
+        element.$.saveButton.click();
+        server.respond(); // 201 response
+        flush(function () {
+          clock.tick(1010);
+          assert.equal(server.requests.length, 2);
+          server.respond(); // poll response      
+          flush(function () {
+            assert.equal(element.polling, true);
+            assert.equal(element.$.spinner.hidden, false);
+            assert.equal(element.value, "Initial value");
+            assert.equal(element.$.textInput.hidden, false);
+            assert.equal(element.$.displayValue.style.display==="none", true);
+            done();
+          });
+        });
+      });
+
+      test("value is not saved after an unsuccessful completed poll response", (done) => {
+        server.respondWith('GET', '/poll/123', [200, { 'Content-Type': 'application/json' }, '{"complete": true, "success":false}']);
+
+        const element = fixture('SuccessResponseTestFixture');
+        element.$.displayValue.click();
+        element.newValue = "Updated value";
+        element.$.saveButton.click();
+        server.respond(); // 201 response
+        flush(function () {
+          clock.tick(1010);
+          assert.equal(server.requests.length, 2);
+          server.respond(); // poll response      
+          flush(function () {
+            assert.equal(element.polling, false);
+            assert.equal(element.$.spinner.hidden, true);
+            assert.equal(element.value, "Initial value");
+            assert.equal(element.$.textInput.hidden, false);
+            assert.equal(element.$.displayValue.style.display==="none", true);
+            assert.equal(element.$.errorMark.hidden, false);
+            done();
+          });
+        });
+      });
+
+      test("element stops polling after retry count is exceeded", (done) => {
+        server.respondWith('GET', '/poll/123', [500, { 'Content-Type': 'application/json' }, '{}']);
+
+        const element = fixture('SuccessResponseTestFixture');
+        element.$.displayValue.click();
+        element.newValue = "Updated value";
+        element.$.saveButton.click();
+        server.respond(); // 201 response
+        flush(function () {
+          for(var i = 0; i < 10; i++) {
+            clock.tick(1010);
+            server.respond(); // error poll response
+          }      
+          flush(function () {
+            assert.equal(element.polling, false);
+            assert.equal(element.value, "Initial value");
+            assert.equal(element.$.errorMark.hidden, false);
+            done();
+          });
+        });
+      });
+
+    });
+
     
-    
-    // custom response handler tests
-    suite('custom response handler tests', () => {
-      var ajax, request, server;
+    // request response callback tests
+    suite('request response callback tests', () => {
+      var ajax, request, server, clock;
 
       setup(function () {
         var headers = { 'Content-Type': 'application/json' };
         server = sinon.fakeServer.create();
-        server.respondWith('POST', /\/success/, [200, headers, '{"success":true, "message":"Updated"}']);
-        server.respondWith('POST', /\/fail/, [400, headers, '{"success":false, "message":"Invalid data"}']);
+        server.respondWith('POST', '/success', [200, headers, '{"success":true, "message":"Updated"}']);
+        server.respondWith('POST', '/fail', [400, headers, '{"success":false, "message":"Invalid data"}']);
+        clock = sinon.useFakeTimers();
       });
       
-      teardown(function () { server.restore(); });
+      teardown(function () { 
+        server.restore(); 
+        clock.restore();
+      });
 
       
-      test("custom success response callback method is called", (done) => {
+      test("success response callback method is called", (done) => {
         const element = fixture('SuccessResponseTestFixture');
         
         var responseMessage;
@@ -495,7 +671,7 @@
         });        
       });
             
-      test("custom error response callback method is called", (done) => {
+      test("error response callback method is called", (done) => {
         const element = fixture('ErrorResponseTestFixture');
         
         var statusCode, responseMessage;
@@ -515,6 +691,58 @@
         });     
       });
 
+      test("polling complete callback method is called", (done) => {
+        server.respondWith('POST', '/success', [201, { 'Content-Type': 'application/json', 'Location': '/poll/123' }, '{"message":"Task created"}']);
+        server.respondWith('GET', '/poll/123', [200, { 'Content-Type': 'application/json' }, '{"complete": true, "success":true, "message": "Task completed"}']);
+
+        const element = fixture('SuccessResponseTestFixture');
+
+        var message;
+        element.pollingCompleteCallback = function(response) {
+          message = response.message;
+        };
+        
+        element.$.displayValue.click();
+        element.newValue = "Updated value";
+        element.$.saveButton.click();
+        server.respond(); // 201 response
+        flush(function () {
+          clock.tick(1010);
+          server.respond(); // poll response      
+          flush(function () {
+            assert.equal(message, "Task completed");
+            done();
+          });
+        });
+      });      
+
+      test("polling failed callback method is called", (done) => {
+        server.respondWith('POST', '/success', [201, { 'Content-Type': 'application/json', 'Location': '/poll/123' }, '{"message":"Task created"}']);
+        server.respondWith('GET', '/poll/123', [500, { 'Content-Type': 'application/json' }, '{}']);
+
+        const element = fixture('SuccessResponseTestFixture');
+
+        var methodCalled = false;
+        element.pollingFailedCallback = function() {
+          methodCalled = true;
+        };
+        
+        element.$.displayValue.click();
+        element.newValue = "Updated value";
+        element.$.saveButton.click();
+        server.respond(); // 201 response
+        flush(function () {
+          for(var i = 0; i < 10; i++) {
+            clock.tick(1010);
+            server.respond(); // error poll response
+          }      
+          flush(function () {
+            assert.equal(methodCalled, true);
+            done();
+          });
+        });
+      });
+        
     });
 
 
@@ -525,8 +753,8 @@
       setup(function () {
         var headers = { 'Content-Type': 'application/json' };
         server = sinon.fakeServer.create();
-        server.respondWith('POST', /\/success/, [200, headers, '{"success":true, "message":"Updated"}']);
-        server.respondWith('POST', /\/fail/, [400, headers, '{"success":false, "message":"Invalid data"}']);
+        server.respondWith('POST', '/success', [200, headers, '{"success":true, "message":"Updated"}']);
+        server.respondWith('POST', '/fail', [400, headers, '{"success":false, "message":"Invalid data"}']);
       });
       
       teardown(function () { server.restore(); });

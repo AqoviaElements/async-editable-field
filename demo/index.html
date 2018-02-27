@@ -67,6 +67,15 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     </div>
 
     <div class='demo-wrapper'>
+      <h3>Loading in edit mode</h3>
+      <demo-snippet>
+        <template>
+          <async-editable-field name="myProperty" value="Value" new-value="New Value" editing></async-editable-field>
+        </template>
+      </demo-snippet>
+    </div>
+    
+    <div class='demo-wrapper'>
       <h3>With custom button labels</h3>
       <demo-snippet>
         <template>
@@ -80,6 +89,15 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       <demo-snippet>
         <template>
           <async-editable-field name="myProperty" value="Value" readonly></async-editable-field>
+        </template>
+      </demo-snippet>
+    </div>
+    
+    <div class='demo-wrapper'>
+      <h3>With a URL for asynchronous saving</h3>
+      <demo-snippet>
+        <template>
+          <async-editable-field name="myProperty" value="Value" name="myValue" url="http://httpstat.us/200?sleep=750"></async-editable-field>
         </template>
       </demo-snippet>
     </div>
@@ -107,16 +125,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 &lt;/script&gt;
       </pre>      
     </div>
-
-    <div class='demo-wrapper'>
-      <h3>With a URL for asynchronous saving</h3>
-      <demo-snippet>
-        <template>
-          <async-editable-field name="myProperty" value="Value" name="myValue" url="http://httpstat.us/200?sleep=750"></async-editable-field>
-        </template>
-      </demo-snippet>
-    </div>
-    
+  
     <div class='demo-wrapper'>
       <h3>With no buttons and saving on-blur</h3>
       <demo-snippet>
@@ -225,6 +234,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       return true;
     };
+
+    
 &lt;/script&gt;
       </pre>
     </div>

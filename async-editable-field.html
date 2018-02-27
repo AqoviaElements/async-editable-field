@@ -100,6 +100,14 @@
           type: String,
           value: 'Cancel'
         },
+        editing: {
+          type: Boolean,
+          value: false
+        },
+        newValue: {
+          type: String,
+          value: ""
+        },
         url: {
           type: String,
           value: null
@@ -162,18 +170,9 @@
           type: Boolean,
           value: false
         },
-        newValue: {
-          type: String,
-          value: ""
-        },
         requestBody: {
           type: String,
           value: "{}",
-          readOnly: true
-        },
-        editing: {
-          type: Boolean,
-          value: false,
           readOnly: true
         },
         requestInProgress: {
@@ -214,8 +213,10 @@
       },
 
       ready: function() {
-        if (this.polling)
+        if (this.pollingUrl){
+          this.editing = true;
           this._startPolling();
+        }          
       },
 
       validate: function() {
@@ -253,7 +254,7 @@
         if (this.readonly)
           return;
 
-        this._setEditing(true);
+        this.editing = true;
         this.newValue = "";
       },
 
@@ -268,7 +269,7 @@
       },
 
       _finishEdit: function() {
-        this._setEditing(false);
+        this.editing = false;
         this._setError(false);
         this._setInvalid(false);
       },
