@@ -39,8 +39,8 @@
 <script>
     var editableField = document.querySelector('async-editable-field#myField');
 
-    editableField.setSuccessResponseCallback(function(response) {
-      alert("Success: " + response);
+    editableField.setSuccessResponseCallback(function(response, xhr) {
+      alert("[" + xhr.status + "] Success: " + response);
     });
 
     editableField.setErrorResponseCallback(function(response, status) {
@@ -50,7 +50,7 @@
     editableField.setValidationFunction(function(value) {
         var reg = new RegExp(/^\d+$/);
         if (!reg.test(value)) {
-            alert("Value must only contain numbers!");
+            this.warningText = "Value must only contain numbers!";
             return false;
         }
         return true;

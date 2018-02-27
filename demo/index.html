@@ -67,6 +67,15 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     </div>
 
     <div class='demo-wrapper'>
+      <h3>Loading in edit mode</h3>
+      <demo-snippet>
+        <template>
+          <async-editable-field name="myProperty" value="Value" new-value="New Value" editing></async-editable-field>
+        </template>
+      </demo-snippet>
+    </div>
+    
+    <div class='demo-wrapper'>
       <h3>With custom button labels</h3>
       <demo-snippet>
         <template>
@@ -83,7 +92,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         </template>
       </demo-snippet>
     </div>
-
+    
     <div class='demo-wrapper'>
       <h3>With a URL for asynchronous saving</h3>
       <demo-snippet>
@@ -94,10 +103,34 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     </div>
     
     <div class='demo-wrapper'>
+      <h3>With click to edit disabled</h3>
+      <demo-snippet>
+        <template>
+          <async-editable-field id="clickDisabled" value="Value" disable-click-to-edit></async-editable-field>
+          <button id="editButton">Edit</button>
+        </template>
+        <script>
+          document.getElementById("editButton").onclick = function() {
+            document.getElementById('clickDisabled').editValue();
+          }
+        </script>
+      </demo-snippet>
+      <pre class="prettyprint demo-script">
+&lt;script type="text/javascript"&gt;
+  document.getElementById("editButton")
+    .onclick = function() {
+      document.getElementById('clickDisabled')
+        .editValue();
+    }
+&lt;/script&gt;
+      </pre>      
+    </div>
+  
+    <div class='demo-wrapper'>
       <h3>With no buttons and saving on-blur</h3>
       <demo-snippet>
         <template>
-          <async-editable-field value="Value" name="myValue" url="http://httpstat.us/200?sleep=750" hide-save-button hide-cancel-button save-on-blur></async-editable-field>
+          <async-editable-field name="myProperty" value="Value" url="http://httpstat.us/200?sleep=750" hide-save-button hide-cancel-button save-on-blur></async-editable-field>
         </template>
       </demo-snippet>
     </div>
@@ -106,10 +139,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       <h3>With custom button colors</h3>
       <demo-snippet>
         <template>
-          <async-editable-field id="withCustomButtons" value="Value" name="myValue" url="http://httpstat.us/200?sleep=750"></async-editable-field>
+          <async-editable-field id="customButtons" name="myProperty" value="Value" url="http://httpstat.us/200?sleep=750"></async-editable-field>
         </template>
         <style>
-          #withCustomButtons {
+          #customButtons {
             --button-text-color: #ffc956;
             --button-color: #e02e2e;
             --disabled-button-color: #fd9292;
@@ -119,7 +152,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
       <pre class="prettyprint demo-script">
 &lt;style&gt;
-  #withCustomButtons {
+  #customButtons {
     --button-text-color: #ffc956;
     --button-color: #e02e2e;
     --disabled-button-color: #fd9292;
@@ -133,39 +166,37 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       <h3>With custom request response callbacks</h3>
       <demo-snippet>
         <template>
-          <async-editable-field id="withCustomResponse" name="myProperty" value="Value" url="http://httpstat.us/200?sleep=750"></async-editable-field>
+          <async-editable-field id="responseCallbacks" name="myProperty" value="Value" url="http://httpstat.us/200?sleep=750"></async-editable-field>
         </template>
         <script>
-            var editableField = document.querySelector('#withCustomResponse');
+            var editableField = document.querySelector('#responseCallbacks');
             
-            editableField.setSuccessResponseCallback(function(response) {
+            editableField.successResponseCallback = function(response, xhr) {
               alert("Success: " + response);
-            });
+            };
 
-            editableField.setErrorResponseCallback(function(response, status) {
+            editableField.errorResponseCallback = function(response, status) {
               alert("[" + status + "] " + response);
-            });
+            };
           </script>
       </demo-snippet>
 
       <pre class="prettyprint demo-script">
 &lt;script type="text/javascript"&gt;
   var editableField = 
-    document.querySelector('#withCustomResponse');
+    document.querySelector('#responseCallbacks');
   
   editableField
-    .setSuccessResponseCallback(
-      function(response) {
+    .successResponseCallback = 
+      function(response, xhr) {
         alert("Success: " + response);
-      }
-    );
+      };
   
   editableField
-    .setErrorResponseCallback(
+    .errorResponseCallback = 
       function(response, status) {
         alert("[" + status + "] " + response);
-      }
-    );
+      };
 &lt;/script&gt;
       </pre>
 
@@ -178,39 +209,70 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           <async-editable-field id="withValidation" name="myProperty" value="Value" url="http://httpstat.us/200?sleep=750"></async-editable-field>
         </template>
         <script>
-            var editableField = document.querySelector('#withValidation');
-            
-            editableField.setValidationFunction(function(value) {
+            document.querySelector('#withValidation')
+              .validationFunction = function(value) {
               var reg = new RegExp(/^\d+$/);
               if (!reg.test(value)) {
-                editableField.warningText = "Value must only contain numbers!";
+                this.warningText = "Value must only contain numbers!";
                 return false;
               }
               return true;
-            });
+            };
           </script>
       </demo-snippet>
       <pre class="prettyprint demo-script">
 &lt;script type="text/javascript"&gt;
-  var editableField = 
-    document.querySelector('#withValidation');
-              
-  editableField
-    .setValidationFunction(function(value) {
+  document.querySelector('#withValidation')
+    .validationFunction = function(value) {
       var reg = new RegExp(/^\d+$/);
       
       if (!reg.test(value)) {
-        editableField.warningText = 
+        this.warningText = 
           "Value must only contain numbers!";
         return false;
       }
 
       return true;
-    });
+    };
+
+    
 &lt;/script&gt;
       </pre>
     </div>
 
+    <div class='demo-wrapper'>
+      <h3>With validation while typing</h3>
+      <demo-snippet>
+        <template>
+          <async-editable-field id="validateTyping" name="myProperty" value="Value" url="http://httpstat.us/200?sleep=750" validate-while-typing></async-editable-field>
+        </template>
+        <script>
+            document.querySelector('#validateTyping')
+              .validationFunction = function(input) {
+                if (input.length >= 5)
+                  return true;
+                
+                this.warningText = "Input must be at least 5 characters";
+                return false;
+              };
+          </script>
+      </demo-snippet>
+      <pre class="prettyprint demo-script">
+&lt;script type="text/javascript"&gt;
+  document
+    .querySelector('#validateTyping')  
+    .validationFunction = function(input) {
+      if (input.length >= 5)
+        return true;
+
+      this.warningText = 
+        "Input must be at least 5 characters";
+      return false;
+    };
+&lt;/script&gt;
+      </pre>
+    </div>
+  
   </div>
 </body>
 

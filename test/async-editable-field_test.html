@@ -15,9 +15,15 @@
 
 <body>
 
+  <test-fixture id="EditingTestFixture">
+    <template>
+      <async-editable-field value="Initial value" new-value="New value" url="/success" editing></async-editable-field>
+    </template>
+  </test-fixture>
+  
   <test-fixture id="SuccessResponseTestFixture">
     <template>
-      <async-editable-field value="Initial value" url="/success"></async-editable-field>
+      <async-editable-field value="Initial value" url="/success" polling-retries="10"></async-editable-field>
     </template>
   </test-fixture>
   
@@ -51,9 +57,27 @@
     </template>
   </test-fixture>
 
+  <test-fixture id="ValidationWhileTypingTestFixture">
+    <template>
+      <async-editable-field value="Initial value" url="/success" validate-while-typing></async-editable-field>
+    </template>
+  </test-fixture>
+
+  <test-fixture id="ClickToEditDisabledTestFixture">
+    <template>
+      <async-editable-field value="Initial value" url="/success" disable-click-to-edit></async-editable-field>
+    </template>
+  </test-fixture>
+  
   <test-fixture id="WarningTextTestFixture">
     <template>
       <async-editable-field value="Initial value" url="/fail" warning-text="There is a problem with your input"></async-editable-field>
+    </template>
+  </test-fixture>
+
+  <test-fixture id="PollingUrlTestFixture">
+    <template>
+      <async-editable-field value="Initial value" value="New value" url="/success" polling-url="/poll/123" polling-retries="3"></async-editable-field>
     </template>
   </test-fixture>
   
@@ -66,13 +90,9 @@
         assert.equal(element.value, 'Initial value');
       });
 
-      test("on load, text input is hidden", () => {
+      test("on load, text input is hidden and value is displayed", () => {
         const element = fixture('SuccessResponseTestFixture');
         assert.equal(element.$.textInput.hidden, true);
-      });
-
-      test("on load, element value is displayed", () => {
-        const element = fixture('SuccessResponseTestFixture');
         assert.equal(element.$.displayValue.style.display==="none", false);
       });
 
@@ -82,9 +102,21 @@
         assert.equal(element.$.cancelButton.hidden, true);
       });
 
-      test("on load, loading spinner is hidden", () => {
+      test("on load, spinner is hidden", () => {
         const element = fixture('SuccessResponseTestFixture');
-        assert.equal(element.$.loading.hidden, true);
+        assert.equal(element.$.spinner.hidden, true);
+      });
+      
+      test("with editing set on load, element value is displayed and text is hidden", () => {
+        const element = fixture('EditingTestFixture');
+        assert.equal(element.$.textInput.hidden, false);
+        assert.equal(element.$.displayValue.style.display==="none", true);
+      });
+      
+      test("with editing set on load, text input and element values are set", () => {
+        const element = fixture('EditingTestFixture');
+        assert.equal(element.$.textInput.value, "New value");
+        assert.equal(element.value, "Initial value");
       });
 
       test("when field is clicked, text input is displayed", () => {
@@ -109,14 +141,14 @@
       test("changing the text in the input alone does not update the element's value", () => {
         const element = fixture('SuccessResponseTestFixture');
         element.$.displayValue.click();
-        element.inputValue = "New Value";
+        element.newValue = "New Value";
         assert.equal(element.value, "Initial value");
       });
 
       test("cancelling an edit displays the element's original value", () => {
         const element = fixture('SuccessResponseTestFixture');
         element.$.displayValue.click();
-        element.inputValue = "New Value";
+        element.newValue = "New Value";
         element.$.cancelButton.click();
         assert.equal(element.$.displayValue.style.display==="none", false);
         assert.equal(element.$.textInput.hidden, true);
@@ -170,8 +202,8 @@
       setup(function () {
         var headers = { 'Content-Type': 'application/json' };
         server = sinon.fakeServer.create();
-        server.respondWith('POST', /\/success/, [200, headers, '{"success":true, "message":"Updated"}']);
-        server.respondWith('POST', /\/fail/, [400, headers, '{"success":false, "message":"Invalid data"}']);
+        server.respondWith('POST', '/success', [200, headers, '{"success":true, "message":"Updated"}']);
+        server.respondWith('POST', '/fail', [400, headers, '{"success":false, "message":"Invalid data"}']);
       });
 
       teardown(function () { server.restore(); });
@@ -180,29 +212,29 @@
       test("clicking save when no change has been made, does not result in a request being made", () => {
         const element = fixture('SuccessResponseTestFixture');
         element.$.displayValue.click();
-        element.inputValue = "Initial value";
+        element.newValue = "Initial value";
         element.$.saveButton.click();
         assert.equal(server.requests.length, 0);
         assert.equal(element.$.displayValue.style.display==="none", false);
         assert.equal(element.$.textInput.hidden, true);
       });
 
-      test("saving an edit displays the loading spinner", () => {
+      test("saving an edit displays the spinner", () => {
         const element = fixture('SuccessResponseTestFixture');
         element.$.displayValue.click();
-        element.inputValue = "New Value";
+        element.newValue = "New Value";
         element.$.saveButton.click();
-        assert.equal(element.$.loading.hidden, false);
+        assert.equal(element.$.spinner.hidden, false);
       });
 
-      test("a successful save response hides the loading spinner", (done) => {
+      test("a successful save response hides the spinner", (done) => {
         const element = fixture('SuccessResponseTestFixture');
         element.$.displayValue.click();
-        element.inputValue = "New Value";
+        element.newValue = "New Value";
         element.$.saveButton.click();
         server.respond();
         flush(function () {
-          assert.equal(element.$.loading.hidden, true);
+          assert.equal(element.$.spinner.hidden, true);
           done();
         });
       });      
@@ -210,7 +242,7 @@
       test("a successful save request updates the element's value", (done) => {
         const element = fixture('SuccessResponseTestFixture');
         element.$.displayValue.click();
-        element.inputValue = "New value";
+        element.newValue = "New value";
         element.$.saveButton.click();
         server.respond();
         flush(function () {
@@ -222,14 +254,14 @@
       });
 
       
-      test("an unsuccessful save request sets the 'error' class on the text input", (done) => {
+      test("an unsuccessful save request shows the red error cross on the text input", (done) => {
         const element = fixture('ErrorResponseTestFixture');
         element.$.displayValue.click();
-        element.inputValue = "New value";
+        element.newValue = "New value";
         element.$.saveButton.click();
         server.respond();
         flush(function () {
-          assert.include(Array.from(element.$.textInput.classList), "error");
+          assert.equal(element.$.errorMark.hidden, false);
           done();
         });
       });
@@ -237,7 +269,7 @@
       test("an unsuccessful save request does not update the element's value", (done) => {
         const element = fixture('ErrorResponseTestFixture');
         element.$.displayValue.click();
-        element.inputValue = "New value";
+        element.newValue = "New value";
         element.$.saveButton.click();
         server.respond();
         flush(function () {
@@ -258,8 +290,7 @@
       setup(function () {
         var headers = { 'Content-Type': 'application/json' };
         server = sinon.fakeServer.create();
-        server.respondWith('POST', /\/success/, [200, headers, '{"success":true, "message":"Updated"}']);
-        server.respondWith('POST', /\/fail/, [400, headers, '{"success":false, "message":"Invalid data"}']);
+        server.respondWith('POST', '/success', [200, headers, '{"success":true, "message":"Updated"}']);
       });
       
       teardown(function () { server.restore(); });
@@ -282,7 +313,7 @@
         const element = fixture('NoButtonsTestFixture');
         element.$.displayValue.click();
         element.$.textInput.dispatchEvent(new Event("focus"));
-        element.inputValue = "New value";
+        element.newValue = "New value";
         element.$.textInput.dispatchEvent(new Event("blur"));
         server.respond();
         flush(function () {
@@ -297,7 +328,7 @@
         const element = fixture('NoButtonsTestFixture');
         element.$.displayValue.click();
         element.$.textInput.dispatchEvent(new Event("focus"));
-        element.inputValue = "Initial value";
+        element.newValue = "Initial value";
         element.$.textInput.dispatchEvent(new Event("blur"));
         assert.equal(server.requests.length, 0);
         assert.equal(element.$.displayValue.style.display==="none", false);
@@ -314,36 +345,100 @@
       setup(function () {
         var headers = { 'Content-Type': 'application/json' };
         server = sinon.fakeServer.create();
-        server.respondWith('POST', /\/success/, [200, headers, '{"success":true, "message":"Updated"}']);
-        server.respondWith('POST', /\/fail/, [400, headers, '{"success":false, "message":"Invalid data"}']);
+        server.respondWith('POST', '/success', [200, headers, '{"success":true, "message":"Updated"}']);
       });
       
       teardown(function () { server.restore(); });
 
       
-      test("custom validation method is called", () => {
+      test("custom validation method is called on save", () => {
         const element = fixture('ValidationTestFixture');
         
         var validationTriggered = false;
-        element.setValidationFunction(function(input) {
+        element.validationFunction = function(input) {
           validationTriggered = true;
-        });
+        };
         
         element.$.displayValue.click();
-        element.inputValue = "New value";
+        element.newValue = "New value";
         element.$.saveButton.click();
         assert.equal(validationTriggered, true);
+      });
+      
+      test("without validate-while-typing, validation is not triggered while typing", () => {
+        const element = fixture('ValidationTestFixture');
+        
+        var validationTriggered = false;
+        element.validationFunction = function(input) {
+          validationTriggered = true;
+        };
+        
+        element.$.displayValue.click();
+        element.$.textInput.dispatchEvent(new Event("keyup"));
+        assert.equal(validationTriggered, false);
+      });
+      
+      test("with validate-while-typing, validation is triggered while typing", () => {
+        const element = fixture('ValidationWhileTypingTestFixture');
+        
+        var validationTriggered = false;
+        element.validationFunction = function(input) {
+          validationTriggered = true;
+        };
+        
+        element.$.displayValue.click();
+        element.$.textInput.dispatchEvent(new Event("keyup"));
+        assert.equal(validationTriggered, true);
+      });
+
+      test("invalid input shows the red error cross on the text input", () => {
+        const element = fixture('ValidationTestFixture');
+
+        element.validationFunction = function(input) {
+          return input.length >= 5;
+        };
+
+        element.$.displayValue.click();
+        element.newValue = "1234";
+        element.$.saveButton.click();
+        assert.equal(element.$.errorMark.hidden, false);
+      });
+      
+      test("with validate-while-typing, invalid input shows the red error cross while typing", () => {
+        const element = fixture('ValidationWhileTypingTestFixture');
+        
+        element.validationFunction = function(input) {
+          return input.length >= 5;
+        };
+        
+        element.$.displayValue.click();        
+        element.newValue = "1234";
+        element.$.textInput.dispatchEvent(new Event("keyup"));
+        assert.equal(element.$.errorMark.hidden, false);
+      });
+
+      test("with validate-while-typing, valid input shows the green validation tick while typing", () => {
+        const element = fixture('ValidationWhileTypingTestFixture');
+        
+        element.validationFunction = function(input) {
+          return input.length >= 5;
+        };
+        
+        element.$.displayValue.click();        
+        element.newValue = "12345";
+        element.$.textInput.dispatchEvent(new Event("keyup"));
+        assert.equal(element.$.validMark.hidden, false);
       });
 
       test("invalid input does not result in a save request being made", () => {
         const element = fixture('ValidationTestFixture');
         
-        element.setValidationFunction(function(input) {
-          return (input.length >= 5);
-        });
+        element.validationFunction = function(input) {
+          return input.length >= 5;
+        };
 
         element.$.displayValue.click();
-        element.inputValue = "1234";
+        element.newValue = "1234";
         element.$.saveButton.click();
         assert.equal(server.requests.length, 0);
       });
@@ -351,41 +446,28 @@
       test("invalid input does not change the element's value", (done) => {
         const element = fixture('ValidationTestFixture');
         
-        element.setValidationFunction(function(input) {
-          return (input.length >= 5);
-        });
+        element.validationFunction = function(input) {
+          return input.length >= 5;
+        };
 
         element.$.displayValue.click();
-        element.inputValue = "1234";
+        element.newValue = "1234";
         element.$.saveButton.click();
-        flush(function() {
+        flush(function () {
           assert.equal(element.value, "Initial value");
           done();
         });
       });
 
-      test("invalid input sets the 'error' class on the text input", () => {
-        const element = fixture('ValidationTestFixture');
-
-        element.setValidationFunction(function(input) {
-          return (input.length >= 5);
-        });
-
-        element.$.displayValue.click();
-        element.inputValue = "1234";
-        element.$.saveButton.click();
-        assert.include(Array.from(element.$.textInput.classList), "error");        
-      });
-
       test("valid input results in a save being made", (done) => {
         const element = fixture('ValidationTestFixture');
         
-        element.setValidationFunction(function(input) {
-          return (input.length >= 5);
-        });
+        element.validationFunction = function(input) {
+          return input.length >= 5;
+        };
 
         element.$.displayValue.click();
-        element.inputValue = "12345";
+        element.newValue = "12345";
         element.$.saveButton.click();
         server.respond();
         flush(function () {
@@ -397,32 +479,190 @@
       });
 
     });
+
+
+    // polling tests
+    suite('polling tests', () => {
+      var ajax, request, server, clock;
+
+      setup(function () {
+        var headers = { 'Content-Type': 'application/json', 'Location': '/poll/123' };
+        var pollingHeaders = { 'Content-Type': 'application/json' };
+        server = sinon.fakeServer.create();
+        server.respondWith('POST', '/success', [201, headers, '{"message":"Task created"}']);
+        server.respondWith('GET', '/poll/123', [200, pollingHeaders, '{"complete": true, "success":true}']);  
+        clock = sinon.useFakeTimers();      
+      });
+
+      teardown(function () { 
+        server.restore(); 
+        clock.restore();
+      });
+
+
+      test("when a 201 is returned, the location header is used for polling", (done) => {
+        const element = fixture('SuccessResponseTestFixture');
+        element.$.displayValue.click();
+        element.newValue = "Updated value";
+        element.$.saveButton.click();
+        server.respond();
+        flush(function () {
+          assert.equal(element.pollingUrl, "/poll/123");
+          assert.equal(element.polling, true);
+          done();
+        });
+      });
+
+      test("when polling, the spinner displays", (done) => {
+        const element = fixture('SuccessResponseTestFixture');
+        element.$.displayValue.click();
+        element.newValue = "Updated value";
+        element.$.saveButton.click();
+        server.respond();
+        flush(function () {
+          assert.equal(element.$.spinner.hidden, false);
+          done();
+        });
+      });
+
+      test("element set with a polling url loads in polling state", () => {
+        const element = fixture('PollingUrlTestFixture');      
+        assert.equal(element.pollingUrl, "/poll/123");
+        assert.equal(element.polling, true);
+        assert.equal(element.$.spinner.hidden, false);
+      });
+      
+      test("element set with a polling url performs polling", (done) => {        
+        const element = fixture('PollingUrlTestFixture');        
+        clock.tick(1010);
+        flush(function () {
+          server.respond();
+          assert.equal(server.requests.length, 1);
+          done();
+        });        
+      });      
+
+      test("value is saved after a successful completed poll response", (done) => {
+        const element = fixture('SuccessResponseTestFixture');
+        element.$.displayValue.click();
+        element.newValue = "Updated value";
+        element.$.saveButton.click();
+        server.respond(); // 201 response
+        flush(function () {
+          clock.tick(1010);
+          assert.equal(server.requests.length, 2);
+          server.respond(); // poll response      
+          flush(function () {
+            assert.equal(element.polling, false);
+            assert.equal(element.$.spinner.hidden, true);
+            assert.equal(element.value, "Updated value");
+            assert.equal(element.$.textInput.hidden, true);
+            assert.equal(element.$.displayValue.style.display==="none", false);
+            done();
+          });
+        });
+      });
+
+      test("element stays in polling state if poll response does not return completed", (done) => {
+        server.respondWith('GET', '/poll/123', [200, { 'Content-Type': 'application/json' }, '{"complete": false, "success":false}']);
+
+        const element = fixture('SuccessResponseTestFixture');
+        element.$.displayValue.click();
+        element.newValue = "Updated value";
+        element.$.saveButton.click();
+        server.respond(); // 201 response
+        flush(function () {
+          clock.tick(1010);
+          assert.equal(server.requests.length, 2);
+          server.respond(); // poll response      
+          flush(function () {
+            assert.equal(element.polling, true);
+            assert.equal(element.$.spinner.hidden, false);
+            assert.equal(element.value, "Initial value");
+            assert.equal(element.$.textInput.hidden, false);
+            assert.equal(element.$.displayValue.style.display==="none", true);
+            done();
+          });
+        });
+      });
+
+      test("value is not saved after an unsuccessful completed poll response", (done) => {
+        server.respondWith('GET', '/poll/123', [200, { 'Content-Type': 'application/json' }, '{"complete": true, "success":false}']);
+
+        const element = fixture('SuccessResponseTestFixture');
+        element.$.displayValue.click();
+        element.newValue = "Updated value";
+        element.$.saveButton.click();
+        server.respond(); // 201 response
+        flush(function () {
+          clock.tick(1010);
+          assert.equal(server.requests.length, 2);
+          server.respond(); // poll response      
+          flush(function () {
+            assert.equal(element.polling, false);
+            assert.equal(element.$.spinner.hidden, true);
+            assert.equal(element.value, "Initial value");
+            assert.equal(element.$.textInput.hidden, false);
+            assert.equal(element.$.displayValue.style.display==="none", true);
+            assert.equal(element.$.errorMark.hidden, false);
+            done();
+          });
+        });
+      });
+
+      test("element stops polling after retry count is exceeded", (done) => {
+        server.respondWith('GET', '/poll/123', [500, { 'Content-Type': 'application/json' }, '{}']);
+
+        const element = fixture('SuccessResponseTestFixture');
+        element.$.displayValue.click();
+        element.newValue = "Updated value";
+        element.$.saveButton.click();
+        server.respond(); // 201 response
+        flush(function () {
+          for(var i = 0; i < 10; i++) {
+            clock.tick(1010);
+            server.respond(); // error poll response
+          }      
+          flush(function () {
+            assert.equal(element.polling, false);
+            assert.equal(element.value, "Initial value");
+            assert.equal(element.$.errorMark.hidden, false);
+            done();
+          });
+        });
+      });
+
+    });
+
     
-    
-    // custom response handler tests
-    suite('custom response handler tests', () => {
-      var ajax, request, server;
+    // request response callback tests
+    suite('request response callback tests', () => {
+      var ajax, request, server, clock;
 
       setup(function () {
         var headers = { 'Content-Type': 'application/json' };
         server = sinon.fakeServer.create();
-        server.respondWith('POST', /\/success/, [200, headers, '{"success":true, "message":"Updated"}']);
-        server.respondWith('POST', /\/fail/, [400, headers, '{"success":false, "message":"Invalid data"}']);
+        server.respondWith('POST', '/success', [200, headers, '{"success":true, "message":"Updated"}']);
+        server.respondWith('POST', '/fail', [400, headers, '{"success":false, "message":"Invalid data"}']);
+        clock = sinon.useFakeTimers();
       });
       
-      teardown(function () { server.restore(); });
+      teardown(function () { 
+        server.restore(); 
+        clock.restore();
+      });
 
       
-      test("custom success response callback method is called", (done) => {
+      test("success response callback method is called", (done) => {
         const element = fixture('SuccessResponseTestFixture');
         
         var responseMessage;
-        element.setSuccessResponseCallback(function(response) {
+        element.successResponseCallback = function(response) {
           responseMessage = response.message;
-        });
+        };
 
         element.$.displayValue.click();
-        element.inputValue = "New value";
+        element.newValue = "New value";
         element.$.saveButton.click();
         server.respond();
         flush(function () {
@@ -431,17 +671,17 @@
         });        
       });
             
-      test("custom error response callback method is called", (done) => {
+      test("error response callback method is called", (done) => {
         const element = fixture('ErrorResponseTestFixture');
         
         var statusCode, responseMessage;
-        element.setErrorResponseCallback(function(response, status) {
+        element.errorResponseCallback = function(response, status) {
           responseMessage = response.message;
           statusCode = status;
-        });
+        };
 
         element.$.displayValue.click();
-        element.inputValue = "New value";
+        element.newValue = "New value";
         element.$.saveButton.click();
         server.respond();
         flush(function () {
@@ -451,6 +691,58 @@
         });     
       });
 
+      test("polling complete callback method is called", (done) => {
+        server.respondWith('POST', '/success', [201, { 'Content-Type': 'application/json', 'Location': '/poll/123' }, '{"message":"Task created"}']);
+        server.respondWith('GET', '/poll/123', [200, { 'Content-Type': 'application/json' }, '{"complete": true, "success":true, "message": "Task completed"}']);
+
+        const element = fixture('SuccessResponseTestFixture');
+
+        var message;
+        element.pollingCompleteCallback = function(response) {
+          message = response.message;
+        };
+        
+        element.$.displayValue.click();
+        element.newValue = "Updated value";
+        element.$.saveButton.click();
+        server.respond(); // 201 response
+        flush(function () {
+          clock.tick(1010);
+          server.respond(); // poll response      
+          flush(function () {
+            assert.equal(message, "Task completed");
+            done();
+          });
+        });
+      });      
+
+      test("polling failed callback method is called", (done) => {
+        server.respondWith('POST', '/success', [201, { 'Content-Type': 'application/json', 'Location': '/poll/123' }, '{"message":"Task created"}']);
+        server.respondWith('GET', '/poll/123', [500, { 'Content-Type': 'application/json' }, '{}']);
+
+        const element = fixture('SuccessResponseTestFixture');
+
+        var methodCalled = false;
+        element.pollingFailedCallback = function() {
+          methodCalled = true;
+        };
+        
+        element.$.displayValue.click();
+        element.newValue = "Updated value";
+        element.$.saveButton.click();
+        server.respond(); // 201 response
+        flush(function () {
+          for(var i = 0; i < 10; i++) {
+            clock.tick(1010);
+            server.respond(); // error poll response
+          }      
+          flush(function () {
+            assert.equal(methodCalled, true);
+            done();
+          });
+        });
+      });
+        
     });
 
 
@@ -461,8 +753,8 @@
       setup(function () {
         var headers = { 'Content-Type': 'application/json' };
         server = sinon.fakeServer.create();
-        server.respondWith('POST', /\/success/, [200, headers, '{"success":true, "message":"Updated"}']);
-        server.respondWith('POST', /\/fail/, [400, headers, '{"success":false, "message":"Invalid data"}']);
+        server.respondWith('POST', '/success', [200, headers, '{"success":true, "message":"Updated"}']);
+        server.respondWith('POST', '/fail', [400, headers, '{"success":false, "message":"Invalid data"}']);
       });
       
       teardown(function () { server.restore(); });
@@ -482,16 +774,16 @@
       test("warning text can be set during validation", () => {
         const element = fixture('WarningTextTestFixture');
         
-        element.setValidationFunction(function(input) {
+        element.validationFunction = function(input) {
           if (input.length < 5) {
-            element.warningText = "Input must be at least 5 characters";
+            this.warningText = "Input must be at least 5 characters";
             return false;
           }
           return true;
-        });
+        };
 
         element.$.displayValue.click();
-        element.inputValue = "1234";
+        element.newValue = "1234";
         element.$.saveButton.click();
         assert.equal(element.$.warning.innerHTML, "Input must be at least 5 characters");
         assert.equal(element.$.warning.hidden, false);
@@ -500,12 +792,12 @@
       test("warning text can be set inside an error response callback", (done) => {
         const element = fixture('WarningTextTestFixture');
         
-        element.setErrorResponseCallback(function(response, status) {
-          element.warningText = "There was an error with your value";
-        });
+        element.errorResponseCallback = function(response, status) {
+          this.warningText = "There was an error with your value";
+        };
 
         element.$.displayValue.click();
-        element.inputValue = "New value";
+        element.newValue = "New value";
         element.$.saveButton.click();
         server.respond();
         flush(function () {
@@ -518,22 +810,43 @@
       test("warning text should not show if not in editing and error state", () => {
         const element = fixture('WarningTextTestFixture');
         
-        element.setValidationFunction(function(input) {
+        element.validationFunction = function(input) {
           if (input.length >= 5) {
-            element.warningText = "Input must be at least 5 characters";
+            this.warningText = "Input must be at least 5 characters";
             return false;
           }
           return true;
-        });
+        };
 
         element.$.displayValue.click();
-        element.inputValue = "1234";
+        element.newValue = "1234";
         element.$.saveButton.click();
         element.$.cancelButton.click();
         assert.equal(element.$.warning.hidden, true);
       });
 
     });
+
+    
+    // disable-click-to-edit tests
+    suite('disable-click-to-edit tests', () => {
+
+      test("when field is clicked, element does not become editable", () => {
+        const element = fixture('ClickToEditDisabledTestFixture');
+        element.$.displayValue.click();
+        assert.equal(element.$.textInput.hidden, true);
+        assert.equal(element.$.displayValue.style.display==="none", false);
+      });
+      
+      test("triggering .editValue() should make the element editable", () => {
+        const element = fixture('ClickToEditDisabledTestFixture');
+        element.editValue();
+        assert.equal(element.$.textInput.hidden, false);
+        assert.equal(element.$.displayValue.style.display==="none", true);
+      });
+
+    });
+
   </script>
 
 </body>
