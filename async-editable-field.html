@@ -56,16 +56,16 @@
     <iron-ajax id="ajaxRequest" url$="{{url}}" method="post" content-type="application/json" body$="{{requestBody}}" handle-as="json"
       on-response="_handleResponse" on-error="_handleErrorResponse"></iron-ajax>
     <span id="displayValue" style$="display:{{_getValueDisplayStyle(editing)}}" on-tap="_handleFieldClick">{{value}}</span>
-    <input id="textInput" class$="{{_getInputClasses(error)}}" hidden$="{{!editing}}" value="{{inputValue::input}}" placeholder$="{{value}}" on-keydown="_handleKeyDown"
-      on-blur="_handleBlur" />
+    <input id="textInput" hidden$="{{!editing}}" value="{{inputValue::input}}" placeholder$="{{value}}" on-keyup="_handleKeyUp"
+       on-blur="_handleBlur" />
     <span id="errorMark" hidden$="{{!error}}">&#10006;</span>
-    <span id="validMark" hidden$="{{!showValid}}">&#10003;</span>
+    <span id="validMark" hidden$="{{!_shouldShowValidMark(editing, error, inputValue)}}">&#10003;</span>
     <span id="loading" hidden$="{{!loading}}">
       <paper-spinner active></paper-spinner>
     </span>
-    <button id="saveButton" hidden$="{{_shouldHideButtons(editing, loading, hideSaveButton)}}" disabled$="{{_shouldDisableSaveButton(inputValue)}}" on-tap="save">{{saveText}}</button>
+    <button id="saveButton" hidden$="{{_shouldHideButtons(editing, loading, hideSaveButton)}}" disabled$="{{_shouldDisableSaveButton(inputValue, error)}}" on-tap="save">{{saveText}}</button>
     <button id="cancelButton" hidden$="{{_shouldHideButtons(editing, loading, hideCancelButton)}}" on-tap="cancelEdit">{{cancelText}}</button>
-    <div id="warning" hidden$="{{!error}}">{{warningText}}</div>
+    <div id="warning" hidden$="{{_shouldHideWarning(editing, error, warningText)}}">{{warningText}}</div>
   </template>
 
   <script>
@@ -126,6 +126,10 @@
           type: Boolean,
           value: false
         },
+        validateWhileTyping: {
+          type: Boolean,
+          value: false
+        },
         inputValue: {
           type: String,
           value: ""
@@ -146,11 +150,6 @@
           readOnly: true
         },
         error: {
-          type: Boolean,
-          value: false,
-          readOnly: true
-        },
-        showValid: {
           type: Boolean,
           value: false,
           readOnly: true
@@ -202,7 +201,6 @@
         }
 
         this._setError(false);
-        this._setShowValid(false);
         this._setLoading(true);
         this._setRequestBody('{ "' + this.name + '": "' + this.inputValue + '" }');
         this.$.ajaxRequest.generateRequest();
@@ -230,7 +228,6 @@
         this._setLoading(false);
         this._setEditing(false);
         this._setError(false);
-        this._setShowValid(false);
       },
 
       _handleResponse: function(e) {
@@ -248,11 +245,20 @@
           this.errorResponseCallback(e.detail.request.xhr.response, e.detail.request.status);
       },
 
-      _handleKeyDown: function(e) {
+      _handleKeyUp: function(e) {
         if (e.keyCode === 13 && this.inputValue) // enter/return key
           this.save();
         else if (e.keyCode === 27) // escape key
           this.cancelEdit();
+        else {
+          this._setError(false);
+          if (this.validateWhileTyping)
+            this.validate();
+        }
+      },
+
+      _shouldShowValidMark: function(editing, error, inputValue) {
+        return editing && !error && inputValue;
       },
 
       _handleFieldClick: function() {
@@ -274,12 +280,12 @@
         return !editing || loading || hideButton;
       },
 
-      _shouldDisableSaveButton: function(inputValue) {
-        return !inputValue;
+      _shouldDisableSaveButton: function(inputValue, error) {
+        return !inputValue || error;
       },
 
-      _getInputClasses: function(error) {
-        return error ? "error" : "";
+      _shouldHideWarning: function(editing, error, warningText) {
+        return !editing || !error || !warningText;
       },
 
       _getValueDisplayStyle(editing) {

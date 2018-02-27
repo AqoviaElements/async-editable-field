@@ -51,6 +51,18 @@
     </template>
   </test-fixture>
 
+  <test-fixture id="ValidationWhileTypingTestFixture">
+    <template>
+      <async-editable-field value="Initial value" url="/success" validate-while-typing></async-editable-field>
+    </template>
+  </test-fixture>
+
+  <test-fixture id="ClickToEditDisabledTestFixture">
+    <template>
+      <async-editable-field value="Initial value" url="/success" disable-click-to-edit></async-editable-field>
+    </template>
+  </test-fixture>
+  
   <test-fixture id="WarningTextTestFixture">
     <template>
       <async-editable-field value="Initial value" url="/fail" warning-text="There is a problem with your input"></async-editable-field>
@@ -222,14 +234,14 @@
       });
 
       
-      test("an unsuccessful save request sets the 'error' class on the text input", (done) => {
+      test("an unsuccessful save request shows the red error cross on the text input", (done) => {
         const element = fixture('ErrorResponseTestFixture');
         element.$.displayValue.click();
         element.inputValue = "New value";
         element.$.saveButton.click();
         server.respond();
         flush(function () {
-          assert.include(Array.from(element.$.textInput.classList), "error");
+          assert.equal(element.$.errorMark.hidden, false);
           done();
         });
       });
@@ -321,7 +333,7 @@
       teardown(function () { server.restore(); });
 
       
-      test("custom validation method is called", () => {
+      test("custom validation method is called on save", () => {
         const element = fixture('ValidationTestFixture');
         
         var validationTriggered = false;
@@ -334,12 +346,77 @@
         element.$.saveButton.click();
         assert.equal(validationTriggered, true);
       });
+      
+      test("without validate-while-typing, validation is not triggered while typing", () => {
+        const element = fixture('ValidationTestFixture');
+        
+        var validationTriggered = false;
+        element.setValidationFunction(function(input) {
+          validationTriggered = true;
+        });
+        
+        element.$.displayValue.click();
+        element.$.textInput.dispatchEvent(new Event("keyup"));
+        assert.equal(validationTriggered, false);
+      });
+      
+      test("with validate-while-typing, validation is triggered while typing", () => {
+        const element = fixture('ValidationWhileTypingTestFixture');
+        
+        var validationTriggered = false;
+        element.setValidationFunction(function(input) {
+          validationTriggered = true;
+        });
+        
+        element.$.displayValue.click();
+        element.$.textInput.dispatchEvent(new Event("keyup"));
+        assert.equal(validationTriggered, true);
+      });
+
+      test("invalid input shows the red error cross on the text input", () => {
+        const element = fixture('ValidationTestFixture');
+
+        element.setValidationFunction(function(input) {
+          return input.length >= 5;
+        });
+
+        element.$.displayValue.click();
+        element.inputValue = "1234";
+        element.$.saveButton.click();
+        assert.equal(element.$.errorMark.hidden, false);
+      });
+      
+      test("with validate-while-typing, invalid input shows the red error cross while typing", () => {
+        const element = fixture('ValidationWhileTypingTestFixture');
+        
+        element.setValidationFunction(function(input) {
+          return input.length >= 5;
+        });
+        
+        element.$.displayValue.click();        
+        element.inputValue = "1234";
+        element.$.textInput.dispatchEvent(new Event("keyup"));
+        assert.equal(element.$.errorMark.hidden, false);
+      });
+
+      test("with validate-while-typing, valid input shows the green validation tick while typing", () => {
+        const element = fixture('ValidationWhileTypingTestFixture');
+        
+        element.setValidationFunction(function(input) {
+          return input.length >= 5;
+        });
+        
+        element.$.displayValue.click();        
+        element.inputValue = "12345";
+        element.$.textInput.dispatchEvent(new Event("keyup"));
+        assert.equal(element.$.validMark.hidden, false);
+      });
 
       test("invalid input does not result in a save request being made", () => {
         const element = fixture('ValidationTestFixture');
         
         element.setValidationFunction(function(input) {
-          return (input.length >= 5);
+          return input.length >= 5;
         });
 
         element.$.displayValue.click();
@@ -352,7 +429,7 @@
         const element = fixture('ValidationTestFixture');
         
         element.setValidationFunction(function(input) {
-          return (input.length >= 5);
+          return input.length >= 5;
         });
 
         element.$.displayValue.click();
@@ -364,24 +441,11 @@
         });
       });
 
-      test("invalid input sets the 'error' class on the text input", () => {
-        const element = fixture('ValidationTestFixture');
-
-        element.setValidationFunction(function(input) {
-          return (input.length >= 5);
-        });
-
-        element.$.displayValue.click();
-        element.inputValue = "1234";
-        element.$.saveButton.click();
-        assert.include(Array.from(element.$.textInput.classList), "error");        
-      });
-
       test("valid input results in a save being made", (done) => {
         const element = fixture('ValidationTestFixture');
         
         element.setValidationFunction(function(input) {
-          return (input.length >= 5);
+          return input.length >= 5;
         });
 
         element.$.displayValue.click();
@@ -534,6 +598,27 @@
       });
 
     });
+
+    
+    // disable-click-to-edit tests
+    suite('disable-click-to-edit tests', () => {
+
+      test("when field is clicked, element does not become editable", () => {
+        const element = fixture('ClickToEditDisabledTestFixture');
+        element.$.displayValue.click();
+        assert.equal(element.$.textInput.hidden, true);
+        assert.equal(element.$.displayValue.style.display==="none", false);
+      });
+      
+      test("triggering .editValue() should make the element editable", () => {
+        const element = fixture('ClickToEditDisabledTestFixture');
+        element.editValue();
+        assert.equal(element.$.textInput.hidden, false);
+        assert.equal(element.$.displayValue.style.display==="none", true);
+      });
+
+    });
+
   </script>
 
 </body>
