@@ -342,8 +342,6 @@
           this._setError(true);
           if (this.pollingFailedCallback)
             this.pollingFailedCallback();
-          else
-            console.error("Polling retry limit exceeded");
         } else {
           this.pollInProgress = false;
         }
