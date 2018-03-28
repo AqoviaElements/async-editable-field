@@ -39,21 +39,21 @@
 <script>
     var editableField = document.querySelector('async-editable-field#myField');
 
-    editableField.setSuccessResponseCallback(function(response, xhr) {
+    editableField.successResponseCallback = function(response, xhr) {
       alert("[" + xhr.status + "] Success: " + response);
-    });
+    };
 
-    editableField.setErrorResponseCallback(function(response, status) {
+    editableField.errorResponseCallback = function(response, status) {
       alert("[" + status + "] Response: " + response);
-    });
+    };
         
-    editableField.setValidationFunction(function(value) {
+    editableField.validationFunction = function(value) {
         var reg = new RegExp(/^\d+$/);
         if (!reg.test(value)) {
             this.warningText = "Value must only contain numbers!";
             return false;
         }
         return true;
-    });
+    };
 </script>
 ```
